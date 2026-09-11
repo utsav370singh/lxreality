@@ -1,13 +1,32 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import { Search } from "lucide-react";
 import type { PageHero, Stat } from "@/lib/cms";
 import { Container } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { StatBar } from "@/components/ui/stat-bar";
+import { SelectField } from "@/components/ui/select-field";
+import { BUDGET_RANGES, PROPERTY_TYPE_OPTIONS } from "@/lib/property-filters";
+import { cn } from "@/lib/utils";
 
-const TABS = ["Buy", "Rent", "Invest", "Commercial"];
+const TABS = ["Buy", "Rent", "Invest", "Commercial"] as const;
+type Tab = (typeof TABS)[number];
 
-export function HomeHero({ hero, stats }: { hero: PageHero; stats: Stat[] }) {
+export function HomeHero({
+  hero,
+  stats,
+  locations,
+}: {
+  hero: PageHero;
+  stats: Stat[];
+  /** Distinct cities pulled from real listings, so every option actually matches something. */
+  locations: string[];
+}) {
+  const [tab, setTab] = useState<Tab>("Buy");
+  const targetHref = tab === "Commercial" ? "/projects/commercial" : "/projects/residential";
+
   return (
     <section className="relative isolate overflow-hidden hero-navy">
       <div className="absolute inset-0 -z-10">
@@ -23,7 +42,7 @@ export function HomeHero({ hero, stats }: { hero: PageHero; stats: Stat[] }) {
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-transparent to-navy-950/60" />
       </div>
 
-      <Container className="relative pt-32 pb-16 lg:pt-40">
+      <Container className="relative pt-28 pb-12 sm:pt-32 sm:pb-14 lg:pt-30 lg:pb-16">
         <div className="max-w-2xl">
           {hero.eyebrow && <p className="eyebrow mb-4">{hero.eyebrow}</p>}
           <h1 className="font-display text-4xl leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-[3.75rem]">
@@ -48,54 +67,53 @@ export function HomeHero({ hero, stats }: { hero: PageHero; stats: Stat[] }) {
           </div>
         </div>
 
-        {/* Search widget — visual match to the mockup; submits to the listing page. */}
+        {/* Search widget — tabs switch segment (Commercial -> commercial listings, everything
+            else -> residential); the fields are intentionally identical across tabs. Submitting
+            is a real GET navigation, so the results page receives ?location=&type=&budget=. */}
         <form
-          action="/projects/residential"
-          className="mt-12 max-w-4xl rounded-2xl border border-gold-500/20 bg-navy-900/80 p-2 backdrop-blur"
+          action={targetHref}
+          method="get"
+          className="mt-10 max-w-4xl rounded-2xl border border-gold-500/20 bg-navy-900/80 p-2 backdrop-blur sm:mt-12"
         >
-          <div className="flex flex-wrap gap-1 px-2 pt-2">
-            {TABS.map((tab, i) => (
-              <span
-                key={tab}
-                className={`rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] ${
-                  i === 0 ? "bg-gold-500/15 text-gold-300" : "text-mist-400"
-                }`}
+          <div role="tablist" aria-label="Search intent" className="flex flex-wrap gap-1 px-2 pt-2">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                onClick={() => setTab(t)}
+                className={cn(
+                  "rounded-md px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition-colors",
+                  tab === t ? "bg-gold-500/15 text-gold-300" : "text-mist-400 hover:text-mist-200",
+                )}
               >
-                {tab}
-              </span>
+                {t}
+              </button>
             ))}
           </div>
           <div className="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_auto]">
-            <label className="flex flex-col gap-1 rounded-lg bg-navy-850 px-4 py-2.5">
-              <span className="text-[0.62rem] uppercase tracking-wide text-mist-400">Location</span>
-              <select name="location" className="bg-transparent text-sm text-white outline-none">
-                <option className="bg-navy-900">Select Location</option>
-                <option className="bg-navy-900">Gurugram</option>
-                <option className="bg-navy-900">Noida</option>
-                <option className="bg-navy-900">Delhi</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 rounded-lg bg-navy-850 px-4 py-2.5">
-              <span className="text-[0.62rem] uppercase tracking-wide text-mist-400">Property Type</span>
-              <select name="type" className="bg-transparent text-sm text-white outline-none">
-                <option className="bg-navy-900">Select Type</option>
-                <option className="bg-navy-900">Apartment</option>
-                <option className="bg-navy-900">Villa</option>
-                <option className="bg-navy-900">Office</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 rounded-lg bg-navy-850 px-4 py-2.5">
-              <span className="text-[0.62rem] uppercase tracking-wide text-mist-400">Budget</span>
-              <select name="budget" className="bg-transparent text-sm text-white outline-none">
-                <option className="bg-navy-900">Min – Max</option>
-                <option className="bg-navy-900">₹ 1 – 3 Cr</option>
-                <option className="bg-navy-900">₹ 3 – 6 Cr</option>
-                <option className="bg-navy-900">₹ 6 Cr +</option>
-              </select>
-            </label>
+            <SelectField
+              name="location"
+              label="Location"
+              placeholder="Select Location"
+              options={locations.map((loc) => ({ value: loc, label: loc }))}
+            />
+            <SelectField
+              name="type"
+              label="Property Type"
+              placeholder="Select Type"
+              options={PROPERTY_TYPE_OPTIONS.map((t) => ({ value: t, label: t }))}
+            />
+            <SelectField
+              name="budget"
+              label="Budget"
+              placeholder="Min – Max"
+              options={BUDGET_RANGES.map((r) => ({ value: r.value, label: r.label }))}
+            />
             <button
               type="submit"
-              className="flex items-center justify-center gap-2 rounded-lg gold-gradient px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-navy-950"
+              className="flex h-full min-h-[3.25rem] items-center justify-center gap-2 rounded-lg gold-gradient px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-navy-950"
             >
               <Search className="size-4" aria-hidden />
               Search

@@ -5,7 +5,7 @@ import type { PageContent } from "@/lib/cms";
 
 export function CtaBand({ cta }: { cta: NonNullable<PageContent["cta"]> }) {
   return (
-    <section className="relative isolate overflow-hidden bg-navy-950 py-16 sm:py-20">
+    <section className="relative isolate overflow-hidden bg-navy-950 pt-8 pb-8 sm:pt-9 sm:pb-9 lg:pt-10 lg:pb-10">
       {cta.image && (
         <div className="absolute inset-0 -z-10">
           <Image src={cta.image.url} alt="" fill sizes="100vw" className="object-cover opacity-25" />

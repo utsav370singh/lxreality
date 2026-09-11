@@ -2,12 +2,17 @@
  * Reusable GraphQL fragments.
  *
  * These assume the schema created by the companion `lx-realty-cms` WordPress
- * plugin (see /wordpress/README.md), which needs:
+ * plugin (see /wordpress/README.md), which needs only free plugins:
  *   - WPGraphQL
- *   - ACF Pro + "WPGraphQL for ACF" (v2)
+ *   - Advanced Custom Fields (the free version — no Pro features used)
+ *   - WPGraphQL for ACF
  *
- * Every ACF field group is exposed with a predictable `graphql_field_name`
- * (e.g. `propertyFields`), and every image field returns `{ node { ... } }`.
+ * ACF's free tier has no Repeater, Gallery, Flexible Content or Options Page
+ * fields, so any "list" field here is a single Textarea the admin fills one
+ * item per line (or "Label: Value" per line for pairs) — plain strings over
+ * GraphQL, parsed client-side in map.ts. Every ACF field group is exposed
+ * with a predictable `graphql_field_name` (e.g. `propertyFields`), and every
+ * image field returns `{ node { ... } }`.
  */
 
 export const IMAGE_FIELDS = /* GraphQL */ `
@@ -41,12 +46,15 @@ export const PROPERTY_FIELDS = /* GraphQL */ `
       locationLat
       locationLng
       mapEmbedUrl
+      tags
+      amenities
+      specifications
+      connectivity
       image { node { ...ImageFields } }
-      gallery { nodes { ...ImageFields } }
-      tags { label }
-      amenities { item }
-      specifications { label value }
-      connectivity { label value }
+      gallery1 { node { ...ImageFields } }
+      gallery2 { node { ...ImageFields } }
+      gallery3 { node { ...ImageFields } }
+      gallery4 { node { ...ImageFields } }
     }
   }
 `;
@@ -78,8 +86,8 @@ export const JOB_FIELDS = /* GraphQL */ `
       type
       summary
       applyUrl
-      responsibilities { item }
-      requirements { item }
+      responsibilities
+      requirements
     }
   }
 `;
@@ -114,7 +122,7 @@ export const INSIGHT_FIELDS = /* GraphQL */ `
       readingTime
       author
       authorRole
-      topics { label }
+      topics
       image { node { ...ImageFields } }
       authorPhoto { node { ...ImageFields } }
     }
@@ -144,7 +152,7 @@ export const SERVICE_FIELDS = /* GraphQL */ `
       excerpt
       list
       displayOrder
-      bullets { item }
+      bullets
       icon { node { ...ImageFields } }
       image { node { ...ImageFields } }
     }
@@ -163,7 +171,7 @@ export const OFFICE_FIELDS = /* GraphQL */ `
       mapEmbedUrl
       directionsUrl
       displayOrder
-      features { item }
+      features
       image { node { ...ImageFields } }
     }
   }
@@ -205,39 +213,34 @@ export const VALUE_FIELDS = /* GraphQL */ `
   }
 `;
 
+/**
+ * Optional per-page hero override. Everything else about a page (section
+ * intros, the closing CTA, feature/stat rows) comes from
+ * src/content/site-pages.ts — see that file's header comment for why.
+ * A page with no matching "Site Pages" post in WordPress (or one where these
+ * are all left blank) just keeps the built-in hero unchanged.
+ */
 export const SITE_PAGE_FIELDS = /* GraphQL */ `
   fragment SitePageFields on SitePage {
     databaseId
     slug
-    title
-    pageFields {
-      key
-      heroEyebrow
-      heroTitle
-      heroTitleAccent
-      heroDescription
-      heroBreadcrumb { label }
-      heroImage { node { ...ImageFields } }
-      heroStatsPanelTitle
-      heroPrimaryCtaLabel
-      heroPrimaryCtaHref
-      heroSecondaryCtaLabel
-      heroSecondaryCtaHref
-      heroFeatures { icon title description }
-      heroStats { icon value label }
-      sections { slug eyebrow title titleAccent description }
-      ctaTitle
-      ctaTitleAccent
-      ctaDescription
-      ctaPrimaryLabel
-      ctaPrimaryHref
-      ctaSecondaryLabel
-      ctaSecondaryHref
-      ctaImage { node { ...ImageFields } }
+    pageHeroFields {
+      eyebrow
+      title
+      titleAccent
+      description
+      image { node { ...ImageFields } }
     }
   }
 `;
 
+/**
+ * Note: no ...ImageFields spread here — that fragment targets WPGraphQL's
+ * native `MediaItem` type, but lxSiteSettings.logo.node is our own hand-rolled
+ * `LXMediaNode` type (see wordpress/lx-realty-cms/includes/graphql-settings.php),
+ * which a MediaItem-typed fragment can't be spread onto even though the shape
+ * is identical.
+ */
 export const SITE_SETTINGS_QUERY = /* GraphQL */ `
   query SiteSettings {
     lxSiteSettings {
@@ -253,29 +256,14 @@ export const SITE_SETTINGS_QUERY = /* GraphQL */ `
       instagram
       facebook
       youtube
-      logo { node { ...ImageFields } }
-      stats { icon value label }
-    }
-  }
-  ${IMAGE_FIELDS}
-`;
-
-/**
- * Header + footer navigation — WordPress' native menus (Appearance → Menus),
- * assigned to the "primary" and "footer" theme locations registered by the
- * plugin (see wordpress/lx-realty-cms/includes/menus.php). No ACF involved:
- * WPGraphQL exposes registered menu locations out of the box.
- *
- * A menu item's optional "Description" (Screen Options → Description) becomes
- * the dropdown sub-text under a header child link.
- */
-export const NAVIGATION_QUERY = /* GraphQL */ `
-  query Navigation {
-    primary: menuItems(where: { location: PRIMARY }, first: 100) {
-      nodes { databaseId parentDatabaseId label path description order }
-    }
-    footer: menuItems(where: { location: FOOTER }, first: 100) {
-      nodes { databaseId parentDatabaseId label path description order }
+      stats
+      logo {
+        node {
+          sourceUrl
+          altText
+          mediaDetails { width height }
+        }
+      }
     }
   }
 `;

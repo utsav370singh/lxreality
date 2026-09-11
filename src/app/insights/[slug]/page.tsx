@@ -92,7 +92,7 @@ export default async function InsightDetailPage({
       </Section>
 
       {related.length > 0 && (
-        <Section tone="cream" className="pt-0">
+        <Section tone="cream" edge="bottom">
           <Container>
             <p className="eyebrow mb-6">Related Insights</p>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

@@ -3,12 +3,15 @@
  * WP-CLI example-data seeder.
  *
  *   wp lx-realty seed            Create/update all example content
- *   wp lx-realty seed --fresh    Delete every lxr_* post + the two menus first
+ *   wp lx-realty seed --fresh    Delete every lxr_* post first
  *
  * Mirrors src/lib/cms/mock/*.ts as closely as PHP + ACF allow, so the WP
  * admin and the Next.js mock provider show the same story out of the box.
  * Images are sideloaded from picsum.photos/i.pravatar.cc into the real Media
  * Library (cached by URL, so re-running the command doesn't duplicate them).
+ *
+ * Header/footer navigation is NOT seeded here — it's static in the Next.js
+ * app (src/content/navigation.ts), not sourced from WordPress.
  */
 
 if ( ! defined( 'ABSPATH' ) || ! defined( 'WP_CLI' ) ) {
@@ -23,15 +26,33 @@ require_once ABSPATH . 'wp-admin/includes/image.php';
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Sideload a remote image once; subsequent calls with the same URL reuse the attachment. */
+/**
+ * Sideload a remote image once; subsequent calls with the same URL reuse the
+ * attachment. Uses download_url() + media_handle_sideload() rather than
+ * media_sideload_image() — the latter infers the file type from the URL's
+ * path extension and rejects extensionless URLs like picsum.photos/pravatar.cc
+ * ("Invalid image URL"), even though the response is a perfectly real JPEG.
+ */
 function lxr_seed_image( string $url, string $desc = '' ): int {
 	$cache_key = 'lxr_seed_img_' . md5( $url );
 	$existing  = get_option( $cache_key );
 	if ( $existing && get_post( $existing ) ) {
 		return (int) $existing;
 	}
-	$id = media_sideload_image( $url, 0, $desc, 'id' );
+
+	$tmp = download_url( $url );
+	if ( is_wp_error( $tmp ) ) {
+		WP_CLI::warning( "Could not download {$url}: " . $tmp->get_error_message() );
+		return 0;
+	}
+
+	$file_array = array(
+		'name'     => sanitize_title( $desc ?: 'image' ) . '-' . substr( md5( $url ), 0, 8 ) . '.jpg',
+		'tmp_name' => $tmp,
+	);
+	$id = media_handle_sideload( $file_array, 0, $desc ?: null );
 	if ( is_wp_error( $id ) ) {
+		@unlink( $tmp );
 		WP_CLI::warning( "Could not sideload {$url}: " . $id->get_error_message() );
 		return 0;
 	}
@@ -138,11 +159,11 @@ class LXR_Seed_Command {
 	 *
 	 * ## OPTIONS
 	 * [--fresh]
-	 * : Delete every lxr_* post and the primary/footer menus before seeding.
+	 * : Delete every lxr_* post before seeding.
 	 */
 	public function seed( $args, $assoc_args ) {
 		if ( ! function_exists( 'update_field' ) ) {
-			WP_CLI::error( 'ACF Pro must be active before seeding.' );
+			WP_CLI::error( 'Advanced Custom Fields must be active before seeding.' );
 		}
 
 		if ( ! empty( $assoc_args['fresh'] ) ) {
@@ -151,9 +172,6 @@ class LXR_Seed_Command {
 
 		WP_CLI::log( 'Seeding site settings…' );
 		$this->settings();
-
-		WP_CLI::log( 'Seeding navigation menus…' );
-		$this->menus();
 
 		WP_CLI::log( 'Seeding leaders…' );
 		$leader_ids = $this->leaders();
@@ -195,27 +213,31 @@ class LXR_Seed_Command {
 	}
 
 	private function wipe() {
-		$types = array( 'lxr_property', 'lxr_leader', 'lxr_job', 'lxr_testimonial', 'lxr_insight', 'lxr_resource', 'lxr_service', 'lxr_office', 'lxr_partner', 'lxr_award', 'lxr_value', 'lxr_sitepage' );
+		$types = array( 'lxr_property', 'lxr_leader', 'lxr_job', 'lxr_testimonial', 'lxr_insight', 'lxr_resource', 'lxr_service', 'lxr_office', 'lxr_partner', 'lxr_award', 'lxr_value', 'lxr_sitepage', 'lxr_setting' );
 		foreach ( $types as $type ) {
 			$ids = get_posts( array( 'post_type' => $type, 'post_status' => 'any', 'numberposts' => -1, 'fields' => 'ids' ) );
 			foreach ( $ids as $id ) {
 				wp_delete_post( $id, true );
 			}
 		}
-		foreach ( array( 'Primary Navigation', 'Footer Navigation' ) as $name ) {
-			$menu = wp_get_nav_menu_object( $name );
-			if ( $menu ) {
-				wp_delete_nav_menu( $menu->term_id );
-			}
-		}
-		WP_CLI::log( 'Wiped existing lxr_* content and menus.' );
+		WP_CLI::log( 'Wiped existing lxr_* content.' );
 	}
 
 	/* ---------------- Settings ---------------- */
 
 	private function settings() {
+		$id = lxr_upsert( 'lxr_setting', 'lx-realty-settings', array( 'post_title' => 'LX Realty Settings' ) );
+
 		$logo = lxr_seed_image( lxr_picsum( 'lx-logo', 400, 160 ), 'LX Realty' );
-		$fields = array(
+		$stats = implode( "\n", array(
+			'Award | 10+ | Years of Excellence',
+			'Users | 5000+ | Happy Clients',
+			'Building2 | 25+ | Cities Pan India',
+			'Handshake | 15Mn+ | Sq. Ft. Advisory',
+			'BarChart3 | ₹ 2000Cr+ | Sales Facilitated',
+		) );
+
+		lxr_set_fields( $id, array(
 			'field_lxr_settings_companyName' => 'LX Realty',
 			'field_lxr_settings_phone'       => '+91 99999 99999',
 			'field_lxr_settings_email'       => 'info@lxrealty.in',
@@ -228,86 +250,9 @@ class LXR_Seed_Command {
 			'field_lxr_settings_instagram'   => 'https://www.instagram.com/lxrealty',
 			'field_lxr_settings_facebook'    => 'https://www.facebook.com/lxrealty',
 			'field_lxr_settings_youtube'     => 'https://www.youtube.com/@lxrealty',
-			'field_lxr_settings_stats'       => array(
-				array( 'icon' => 'Award', 'value' => '10+', 'label' => 'Years of Excellence' ),
-				array( 'icon' => 'Users', 'value' => '5000+', 'label' => 'Happy Clients' ),
-				array( 'icon' => 'Building2', 'value' => '25+', 'label' => 'Cities Pan India' ),
-				array( 'icon' => 'Handshake', 'value' => '15Mn+', 'label' => 'Sq. Ft. Advisory' ),
-				array( 'icon' => 'BarChart3', 'value' => '₹ 2000Cr+', 'label' => 'Sales Facilitated' ),
-			),
-		);
-		if ( $logo ) {
-			$fields['field_lxr_settings_logo'] = $logo;
-		}
-		foreach ( $fields as $key => $value ) {
-			update_field( $key, $value, 'option' );
-		}
-	}
-
-	/* ---------------- Menus ---------------- */
-
-	private function menu_item( int $menu_id, string $label, string $url, int $parent = 0, string $description = '' ): int {
-		$id = wp_update_nav_menu_item( $menu_id, 0, array(
-			'menu-item-title'       => $label,
-			'menu-item-url'         => $url,
-			'menu-item-status'      => 'publish',
-			'menu-item-type'        => 'custom',
-			'menu-item-parent-id'   => $parent,
-			'menu-item-description' => $description,
+			'field_lxr_settings_stats'       => $stats,
+			'field_lxr_settings_logo'        => $logo,
 		) );
-		return (int) $id;
-	}
-
-	private function menus() {
-		$home = home_url( '/' );
-
-		$primary = wp_get_nav_menu_object( 'Primary Navigation' ) ?: get_term( wp_create_nav_menu( 'Primary Navigation' ) );
-		wp_set_nav_menu_locations( array_merge( get_nav_menu_locations(), array( 'primary' => $primary->term_id ) ) );
-		foreach ( (array) wp_get_nav_menu_items( $primary->term_id ) as $item ) {
-			wp_delete_post( $item->ID, true );
-		}
-		$this->menu_item( $primary->term_id, 'Home', $home );
-		$this->menu_item( $primary->term_id, 'About Us', $home . 'about' );
-		$this->menu_item( $primary->term_id, 'Services', $home . 'services' );
-		$projects = $this->menu_item( $primary->term_id, 'Projects', $home . 'projects/residential' );
-		$this->menu_item( $primary->term_id, 'Residential Projects', $home . 'projects/residential', $projects, 'Homes across 58 cities' );
-		$this->menu_item( $primary->term_id, 'Commercial Projects', $home . 'projects/commercial', $projects, 'Grade-A offices & retail' );
-		$advisory = $this->menu_item( $primary->term_id, 'Advisory', $home . 'advisory' );
-		$this->menu_item( $primary->term_id, 'Advisory Services', $home . 'advisory', $advisory, 'Investment, research & transactions' );
-		$this->menu_item( $primary->term_id, 'Post-Handover Services', $home . 'advisory/post-handover-services', $advisory, 'Loans, interiors, leasing & management' );
-		$this->menu_item( $primary->term_id, 'Insights', $home . 'insights' );
-		$this->menu_item( $primary->term_id, 'Careers', $home . 'careers' );
-		$this->menu_item( $primary->term_id, 'Contact', $home . 'contact' );
-
-		$footer = wp_get_nav_menu_object( 'Footer Navigation' ) ?: get_term( wp_create_nav_menu( 'Footer Navigation' ) );
-		wp_set_nav_menu_locations( array_merge( get_nav_menu_locations(), array( 'footer' => $footer->term_id ) ) );
-		foreach ( (array) wp_get_nav_menu_items( $footer->term_id ) as $item ) {
-			wp_delete_post( $item->ID, true );
-		}
-		$columns = array(
-			'Company'  => array(
-				'About Us' => 'about', 'Our Leadership' => 'about#leadership', 'Careers' => 'careers',
-				'Media & Press' => 'insights', 'Awards & Recognition' => 'about#awards', 'Contact Us' => 'contact',
-			),
-			'Services' => array(
-				'Residential Advisory' => 'services', 'Commercial Advisory' => 'services', 'Investment Advisory' => 'services',
-				'Project Marketing' => 'services', 'Research & Valuation' => 'services', 'Transaction Management' => 'services',
-			),
-			'Projects' => array(
-				'Residential Projects' => 'projects/residential', 'Commercial Projects' => 'projects/commercial',
-				'New Launches' => 'projects/residential', 'Luxury Projects' => 'projects/residential',
-				'Ready to Move' => 'projects/residential', 'All Projects' => 'projects/residential',
-			),
-			'Insights' => array(
-				'Market Insights' => 'insights', 'Blog' => 'insights', 'Reports' => 'insights#resources', 'News & Updates' => 'insights',
-			),
-		);
-		foreach ( $columns as $title => $links ) {
-			$col = $this->menu_item( $footer->term_id, $title, '#' );
-			foreach ( $links as $label => $path ) {
-				$this->menu_item( $footer->term_id, $label, $home . $path, $col );
-			}
-		}
 	}
 
 	/* ---------------- Leaders ---------------- */
@@ -358,6 +303,14 @@ class LXR_Seed_Command {
 	/* ---------------- Services ---------------- */
 
 	private function services() {
+		$bullets = array(
+			'residential-advisory' => array( 'Curated shortlists matched to your budget and lifestyle', 'Independent, developer-agnostic recommendations', 'Price benchmarking and negotiation support', 'End-to-end paperwork and handover assistance' ),
+			'commercial-advisory' => array( 'Site selection and workplace strategy', 'Lease vs. buy financial modelling', 'Pre-leased and Grade-A investment opportunities', 'Exit and re-leasing advisory' ),
+			'investment-advisory' => array( 'Micro-market research and entry timing', 'Risk-adjusted return projections', 'Portfolio diversification strategy', 'Ongoing performance monitoring' ),
+			'project-marketing' => array( 'Positioning, pricing and launch strategy', 'Channel-partner activation and management', 'Digital demand generation', 'Sales-gallery experience design' ),
+			'research-valuation' => array( 'RICS-aligned valuation methodology', 'Feasibility and highest-and-best-use studies', 'Demand-supply and absorption analysis', 'Custom research mandates' ),
+			'transaction-management' => array( 'Due diligence and title verification', 'Documentation and registration support', 'Coordination with banks and legal teams', 'Post-closure handover and compliance' ),
+		);
 		$main = array(
 			array( 'residential-advisory', 'Residential Advisory', 'home', 'Helping homebuyers find the right homes and investors build high-performing portfolios.' ),
 			array( 'commercial-advisory', 'Commercial Advisory', 'building', 'Advising businesses and investors on office spaces, retail, and industrial investments.' ),
@@ -376,6 +329,7 @@ class LXR_Seed_Command {
 				'field_lxr_service_icon'         => $icon,
 				'field_lxr_service_list'         => 'main',
 				'field_lxr_service_displayOrder' => $i + 1,
+				'field_lxr_service_bullets'      => implode( "\n", $bullets[ $slug ] ?? array() ),
 				'field_lxr_service_image'        => $image,
 			) );
 		}
@@ -419,49 +373,51 @@ class LXR_Seed_Command {
 
 		foreach ( $rows as [ $slug, $title, $segment, $badge, $locality, $city, $price, $tags, $config, $developer, $order ] ) {
 			$id = lxr_upsert( 'lxr_property', "property-{$slug}", array( 'post_title' => $title, 'post_name' => $slug ) );
-			$image   = lxr_seed_image( lxr_picsum( "prop-{$slug}", 1200, 900 ), $title );
+			$image = lxr_seed_image( lxr_picsum( "prop-{$slug}", 1200, 900 ), $title );
 			$gallery = array();
 			foreach ( array( '1', '2', '3', '4' ) as $n ) {
-				$gid = lxr_seed_image( lxr_picsum( "prop-{$slug}-{$n}", 1600, 1000 ), "{$title} {$n}" );
-				if ( $gid ) {
-					$gallery[] = $gid;
-				}
+				$gallery[ $n ] = lxr_seed_image( lxr_picsum( "prop-{$slug}-{$n}", 1600, 1000 ), "{$title} {$n}" );
 			}
 			set_post_thumbnail( $id, $image );
 
 			$is_res = 'residential' === $segment;
+			$amenities = $is_res
+				? array( 'Grand double-height lobby', 'Infinity-edge swimming pool', 'Fully-equipped fitness studio', 'Landscaped central greens', "Kids' play zone & crèche", '24×7 security with CCTV' )
+				: array( 'Triple-height entrance lobby', 'High-speed elevators', '100% power back-up', 'Multi-level basement parking', 'EV charging infrastructure', '24×7 manned security' );
+			$specifications = array(
+				'Configuration: ' . ( $config ?: implode( ' · ', $tags ) ),
+				'Possession: Q4 2028',
+			);
+			$connectivity = array(
+				'Airport: 35 – 45 min drive',
+				'Metro / Rapid Metro: 8 – 12 min drive',
+				'Business district: Within 6 km',
+			);
+
 			lxr_set_fields( $id, array(
-				'field_lxr_property_segment'       => $segment,
-				'field_lxr_property_badge'         => $badge,
-				'field_lxr_property_locality'      => $locality,
-				'field_lxr_property_city'          => $city,
-				'field_lxr_property_priceLabel'    => $price,
-				'field_lxr_property_configuration' => $config,
-				'field_lxr_property_developer'     => $developer,
-				'field_lxr_property_status'        => $badge,
-				'field_lxr_property_reraId'        => 'RERA-GGM-' . wp_rand( 1000, 9999 ) . '-2024',
-				'field_lxr_property_featured'      => true,
-				'field_lxr_property_displayOrder'  => $order,
-				'field_lxr_property_description'   => "{$title} at {$locality}, {$city} — a landmark {$segment} address by {$developer}.",
-				'field_lxr_property_overview'      => "<p>{$title} at {$locality}, {$city} is developed by {$developer}, curated to protect and grow long-term value for owners and investors.</p>",
-				'field_lxr_property_image'         => $image,
-				'field_lxr_property_gallery'       => $gallery,
-				'field_lxr_property_tags'          => array_map( fn( $t ) => array( 'label' => $t ), $tags ),
-				'field_lxr_property_amenities'     => array_map( fn( $t ) => array( 'item' => $t ), $is_res
-					? array( 'Grand double-height lobby', 'Infinity-edge swimming pool', 'Fully-equipped fitness studio', 'Landscaped central greens', "Kids' play zone & crèche", '24×7 security with CCTV' )
-					: array( 'Triple-height entrance lobby', 'High-speed elevators', '100% power back-up', 'Multi-level basement parking', 'EV charging infrastructure', '24×7 manned security' )
-				),
-				'field_lxr_property_specifications' => array(
-					array( 'label' => 'Configuration', 'value' => $config ?: implode( ' · ', $tags ) ),
-					array( 'label' => 'Possession', 'value' => 'Q4 2028' ),
-					array( 'label' => 'RERA', 'value' => 'See RERA field above' ),
-				),
-				'field_lxr_property_connectivity' => array(
-					array( 'label' => 'Airport', 'value' => '35 – 45 min drive' ),
-					array( 'label' => 'Metro / Rapid Metro', 'value' => '8 – 12 min drive' ),
-					array( 'label' => 'Business district', 'value' => 'Within 6 km' ),
-				),
-				'field_lxr_property_brochureUrl' => '',
+				'field_lxr_property_segment'        => $segment,
+				'field_lxr_property_badge'          => $badge,
+				'field_lxr_property_locality'       => $locality,
+				'field_lxr_property_city'           => $city,
+				'field_lxr_property_priceLabel'     => $price,
+				'field_lxr_property_configuration'  => $config,
+				'field_lxr_property_developer'      => $developer,
+				'field_lxr_property_status'         => $badge,
+				'field_lxr_property_reraId'         => 'RERA-GGM-' . wp_rand( 1000, 9999 ) . '-2024',
+				'field_lxr_property_featured'       => true,
+				'field_lxr_property_displayOrder'   => $order,
+				'field_lxr_property_description'    => "{$title} at {$locality}, {$city} — a landmark {$segment} address by {$developer}.",
+				'field_lxr_property_overview'       => "<p>{$title} at {$locality}, {$city} is developed by {$developer}, curated to protect and grow long-term value for owners and investors.</p>",
+				'field_lxr_property_image'          => $image,
+				'field_lxr_property_gallery1'       => $gallery['1'],
+				'field_lxr_property_gallery2'       => $gallery['2'],
+				'field_lxr_property_gallery3'       => $gallery['3'],
+				'field_lxr_property_gallery4'       => $gallery['4'],
+				'field_lxr_property_tags'           => implode( ', ', $tags ),
+				'field_lxr_property_amenities'      => implode( "\n", $amenities ),
+				'field_lxr_property_specifications' => implode( "\n", $specifications ),
+				'field_lxr_property_connectivity'   => implode( "\n", $connectivity ),
+				'field_lxr_property_brochureUrl'    => '',
 			) );
 		}
 	}
@@ -483,18 +439,18 @@ class LXR_Seed_Command {
 				'menu_order' => $i,
 			) );
 			lxr_set_fields( $id, array(
-				'field_lxr_job_department'     => $dept,
-				'field_lxr_job_location'       => $loc,
-				'field_lxr_job_experience'     => $exp,
-				'field_lxr_job_type'           => 'Full-time',
-				'field_lxr_job_summary'        => "Own outcomes for {$dept} as part of LX Realty's {$loc} team.",
-				'field_lxr_job_applyUrl'       => 'mailto:careers@lxrealty.in?subject=' . rawurlencode( $title ),
-				'field_lxr_job_responsibilities' => array_map( fn( $t ) => array( 'item' => $t ), array(
+				'field_lxr_job_department'       => $dept,
+				'field_lxr_job_location'         => $loc,
+				'field_lxr_job_experience'       => $exp,
+				'field_lxr_job_type'             => 'Full-time',
+				'field_lxr_job_summary'          => "Own outcomes for {$dept} as part of LX Realty's {$loc} team.",
+				'field_lxr_job_applyUrl'         => 'mailto:careers@lxrealty.in?subject=' . rawurlencode( $title ),
+				'field_lxr_job_responsibilities' => implode( "\n", array(
 					'Deliver against quarterly targets and KPIs for your function.',
 					'Work cross-functionally with advisory, marketing and operations teams.',
 					"Represent LX Realty's values of integrity and transparency with every client.",
 				) ),
-				'field_lxr_job_requirements' => array_map( fn( $t ) => array( 'item' => $t ), array(
+				'field_lxr_job_requirements' => implode( "\n", array(
 					"{$exp} of relevant experience, ideally in real estate or professional services.",
 					'Strong communication and stakeholder-management skills.',
 					'A collaborative, ownership-driven mindset.',
@@ -558,7 +514,7 @@ class LXR_Seed_Command {
 				'field_lxr_insight_readingTime' => '6 min read',
 				'field_lxr_insight_author'      => 'LX Realty Research',
 				'field_lxr_insight_authorRole'  => 'Market Intelligence Team',
-				'field_lxr_insight_topics'      => array( array( 'label' => $cat ) ),
+				'field_lxr_insight_topics'      => $cat,
 				'field_lxr_insight_image'       => $image,
 			) );
 		}
@@ -621,7 +577,7 @@ class LXR_Seed_Command {
 			'field_lxr_office_mapEmbedUrl'   => 'https://www.openstreetmap.org/export/embed.html?bbox=77.015%2C28.377%2C77.039%2C28.393&layer=mapnik&marker=28.3846%2C77.027',
 			'field_lxr_office_directionsUrl' => 'https://www.google.com/maps/dir/?api=1&destination=DLF+Corporate+Greens+Sector+74A+Gurugram',
 			'field_lxr_office_displayOrder'  => 0,
-			'field_lxr_office_features'      => array_map( fn( $t ) => array( 'item' => $t ), array(
+			'field_lxr_office_features'      => implode( "\n", array(
 				'Prime location with excellent connectivity', 'Spacious, modern workspace', 'Ample parking available', 'Visitor-friendly environment',
 			) ),
 		) );
@@ -655,6 +611,8 @@ class LXR_Seed_Command {
 			'developer' => array( 'DLF', 'M3M', 'Godrej Properties', 'Signature Global', 'Whiteland', 'Smartworld', 'Bhutani Infra', 'Elan Group', 'Birla Estates' ),
 			'bank'      => array( 'HDFC Bank', 'ICICI Bank', 'SBI', 'Axis Bank', 'Kotak Mahindra Bank', 'IDFC First Bank', 'Bajaj Housing Finance', 'PNB Housing' ),
 			'interior'  => array( 'Godrej Interio', 'Livspace', 'HomeLane', 'Asian Paints' ),
+			// Shown as "Our Esteemed Clients" on /projects/commercial.
+			'client'    => array( 'DLF', 'M3M', 'Godrej Properties', 'Signature Global', 'Whiteland', 'Smartworld', 'Bhutani Infra', 'Elan Group' ),
 		);
 		foreach ( $groups as $group => $names ) {
 			foreach ( $names as $i => $name ) {
@@ -688,55 +646,35 @@ class LXR_Seed_Command {
 		}
 	}
 
-	/* ---------------- Site Pages ---------------- */
+	/* ---------------- Site Pages (hero image override, one per page key) ---------------- */
 
+	/**
+	 * Section intros, closing CTAs, and feature/stat rows are NOT seeded here —
+	 * they live permanently in src/content/site-pages.ts. This only seeds the
+	 * hero photo (matching the same placeholder seed the Next.js mock data
+	 * uses, so nothing visually changes until you replace it) to demonstrate
+	 * the one thing this post type is for: swapping a hero photo without a
+	 * code change. Eyebrow/title/titleAccent/description are left blank on
+	 * purpose so the built-in copy is used — fill any of them in to override it.
+	 */
 	private function pages() {
-		$defs = include LXR_CMS_DIR . 'includes/seed-pages.php';
-		foreach ( $defs as $key => $def ) {
-			$id = lxr_upsert( 'lxr_sitepage', "page-{$key}", array( 'post_title' => $def['title'], 'post_name' => $key ) );
-			$hero_image = lxr_seed_image( lxr_picsum( "hero-{$key}", 1920, 1200 ), $def['title'] );
-			set_post_thumbnail( $id, $hero_image );
-
-			$fields = array(
-				'field_lxr_page_key'                   => $key,
-				'field_lxr_page_heroEyebrow'            => $def['hero']['eyebrow'] ?? '',
-				'field_lxr_page_heroTitle'              => $def['hero']['title'],
-				'field_lxr_page_heroTitleAccent'        => $def['hero']['titleAccent'] ?? '',
-				'field_lxr_page_heroDescription'        => $def['hero']['description'] ?? '',
-				'field_lxr_page_heroImage'              => $hero_image,
-				'field_lxr_page_heroStatsPanelTitle'    => $def['hero']['statsPanelTitle'] ?? '',
-				'field_lxr_page_heroPrimaryCtaLabel'    => $def['hero']['primaryCta']['label'] ?? '',
-				'field_lxr_page_heroPrimaryCtaHref'     => $def['hero']['primaryCta']['href'] ?? '',
-				'field_lxr_page_heroSecondaryCtaLabel'  => $def['hero']['secondaryCta']['label'] ?? '',
-				'field_lxr_page_heroSecondaryCtaHref'   => $def['hero']['secondaryCta']['href'] ?? '',
-				'field_lxr_page_heroBreadcrumb'         => array_map( fn( $b ) => array( 'label' => $b ), $def['hero']['breadcrumb'] ?? array() ),
-				'field_lxr_page_heroFeatures'           => array_map( fn( $f ) => array(
-					'icon' => $f['icon'] ?? '', 'title' => $f['title'], 'description' => $f['description'] ?? '',
-				), $def['hero']['features'] ?? array() ),
-				'field_lxr_page_heroStats'              => array_map( fn( $s ) => array(
-					'icon' => $s['icon'] ?? '', 'value' => $s['value'], 'label' => $s['label'],
-				), $def['hero']['stats'] ?? array() ),
-				'field_lxr_page_sections'               => array_map( fn( $slug, $s ) => array(
-					'slug' => $slug, 'eyebrow' => $s['eyebrow'] ?? '', 'title' => $s['title'] ?? '',
-					'titleAccent' => $s['titleAccent'] ?? '', 'description' => $s['description'] ?? '',
-				), array_keys( $def['sections'] ?? array() ), array_values( $def['sections'] ?? array() ) ),
-			);
-
-			if ( ! empty( $def['cta'] ) ) {
-				$cta_image = lxr_seed_image( lxr_picsum( "cta-{$key}", 1600, 500 ), $def['cta']['title'] );
-				$fields = array_merge( $fields, array(
-					'field_lxr_page_ctaTitle'            => $def['cta']['title'],
-					'field_lxr_page_ctaTitleAccent'      => $def['cta']['titleAccent'] ?? '',
-					'field_lxr_page_ctaDescription'      => $def['cta']['description'] ?? '',
-					'field_lxr_page_ctaPrimaryLabel'     => $def['cta']['primaryCta']['label'] ?? '',
-					'field_lxr_page_ctaPrimaryHref'      => $def['cta']['primaryCta']['href'] ?? '',
-					'field_lxr_page_ctaSecondaryLabel'   => $def['cta']['secondaryCta']['label'] ?? '',
-					'field_lxr_page_ctaSecondaryHref'    => $def['cta']['secondaryCta']['href'] ?? '',
-					'field_lxr_page_ctaImage'            => $cta_image,
-				) );
-			}
-
-			lxr_set_fields( $id, $fields );
+		$pages = array(
+			'home'                    => array( 'Home', 'hero-skyline' ),
+			'about'                   => array( 'About Us', 'about-lobby' ),
+			'services'                => array( 'Services', 'services-tower' ),
+			'advisory'                => array( 'Advisory', 'advisory-towers' ),
+			'advisory-post-handover'  => array( 'Post-Handover Services', 'post-handover-interior' ),
+			'projects-residential'    => array( 'Residential Projects', 'residential-hero' ),
+			'projects-commercial'     => array( 'Commercial Projects', 'commercial-hero' ),
+			'insights'                => array( 'Insights', 'insights-hero' ),
+			'careers'                 => array( 'Careers', 'careers-hero' ),
+			'contact'                 => array( 'Contact', 'contact-hero' ),
+		);
+		foreach ( $pages as $key => [ $title, $imageSeed ] ) {
+			$id = lxr_upsert( 'lxr_sitepage', "page-{$key}", array( 'post_title' => $title, 'post_name' => $key ) );
+			$image = lxr_seed_image( lxr_picsum( $imageSeed, 1920, 1200 ), $title );
+			set_post_thumbnail( $id, $image );
+			lxr_set_fields( $id, array( 'field_lxr_page-hero_image' => $image ) );
 		}
 	}
 }

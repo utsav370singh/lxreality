@@ -263,13 +263,14 @@ export interface Value {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Navigation (WordPress-native menus: Appearance → Menus)            */
+/*  Navigation — static, defined in src/content/navigation.ts, never   */
+/*  sourced from a CMS. Types live here only because the layout/header/ */
+/*  footer components share them.                                      */
 /* ------------------------------------------------------------------ */
 
 export interface NavItem {
   label: string;
   href: string;
-  /** WordPress menu-item "Description" field, shown under the label in header dropdowns. */
   description?: string;
   /** One level of sub-items — dropdown in the header, sub-links in the footer. */
   children?: NavItem[];
@@ -278,14 +279,6 @@ export interface NavItem {
 export interface FooterColumn {
   title: string;
   links: { label: string; href: string }[];
-}
-
-export interface Navigation {
-  /** Header menu, WordPress location "primary" (top-level items may nest a dropdown). */
-  primary: NavItem[];
-  /** Footer link columns, WordPress location "footer" (each top-level item is a
-   *  column heading; its children are the links inside that column). */
-  footer: FooterColumn[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -330,7 +323,6 @@ export interface InsightQuery {
 
 export interface CmsProvider {
   getSiteSettings(): Promise<SiteSettings>;
-  getNavigation(): Promise<Navigation>;
   getPage(key: PageKey): Promise<PageContent>;
 
   getProperties(query?: PropertyQuery): Promise<Property[]>;

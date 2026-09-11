@@ -23,7 +23,7 @@ export default async function PostHandoverPage() {
     <>
       <PageHero hero={page.hero} />
 
-      <Section tone="cream">
+      <Section tone="cream" edge="top">
         <Container>
           <SectionHeadingFrom intro={page.sections.services} align="center" tone="light" />
           <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -47,7 +47,7 @@ export default async function PostHandoverPage() {
         </Container>
       </Section>
 
-      <Section tone="cream" className="pt-0">
+      <Section tone="cream">
         <Container>
           <SectionHeadingFrom intro={page.sections.why} align="center" tone="light" />
           <FeatureGrid items={postHandoverWhy} columns={4} tone="light" className="mt-10" />

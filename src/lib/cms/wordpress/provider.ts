@@ -49,19 +49,12 @@ export const wordpressProvider: CmsProvider = {
     }
   },
 
-  async getNavigation() {
-    try {
-      const data = await wpQuery<any>(F.NAVIGATION_QUERY, {}, ["cms", "navigation"]);
-      const nav = map.mapNavigation(data);
-      if (!nav.primary.length) throw new WordPressError('Menu location "primary" is empty or unassigned');
-      return nav;
-    } catch (err) {
-      console.error("[cms:wordpress] getNavigation -> mock:", (err as Error).message);
-      return mockProvider.getNavigation();
-    }
-  },
-
   async getPage(key: PageKey) {
+    // Section intros, the closing CTA and feature/stat rows always come from
+    // src/content/site-pages.ts (see that file's header comment for why) —
+    // this call never fails, so the page always has full content even before
+    // WordPress is wired up or reachable.
+    const base = await mockProvider.getPage(key);
     try {
       // The seeder sets each Site Page's slug === its page key.
       const query = /* GraphQL */ `
@@ -72,12 +65,13 @@ export const wordpressProvider: CmsProvider = {
         ${F.SITE_PAGE_FIELDS}
       `;
       const data = await wpQuery<any>(query, { key }, ["cms", `page:${key}`]);
-      const node = data?.sitePage;
-      if (!node) throw new WordPressError(`SitePage "${key}" not found`);
-      return map.mapSitePage(node);
+      if (!data?.sitePage) return base;
+
+      const { hasImage, ...override } = map.mapPageHeroOverride(data.sitePage);
+      return { ...base, hero: { ...base.hero, ...override, image: hasImage ? override.image! : base.hero.image } };
     } catch (err) {
-      console.error(`[cms:wordpress] getPage(${key}) -> mock:`, (err as Error).message);
-      return mockProvider.getPage(key);
+      console.error(`[cms:wordpress] getPage(${key}) hero override skipped:`, (err as Error).message);
+      return base;
     }
   },
 
@@ -183,7 +177,7 @@ export const wordpressProvider: CmsProvider = {
       const gql = `query Services { services(${ALL}) { nodes { ...ServiceFields } } } ${F.IMAGE_FIELDS} ${F.SERVICE_FIELDS}`;
       const data = await wpQuery<any>(gql, {}, ["cms", "services"]);
       return nodesOf(data, "services")
-        .filter((n: any) => (n.serviceFields?.list ?? "main") !== "advisory")
+        .filter((n: any) => (map.selectValue(n.serviceFields?.list) || "main") !== "advisory")
         .map(map.mapService);
     }, "getServices");
     return list.sort((a, b) => a.order - b.order);
@@ -194,7 +188,7 @@ export const wordpressProvider: CmsProvider = {
       const gql = `query AdvisoryServices { services(${ALL}) { nodes { ...ServiceFields } } } ${F.IMAGE_FIELDS} ${F.SERVICE_FIELDS}`;
       const data = await wpQuery<any>(gql, {}, ["cms", "services"]);
       return nodesOf(data, "services")
-        .filter((n: any) => n.serviceFields?.list === "advisory")
+        .filter((n: any) => map.selectValue(n.serviceFields?.list) === "advisory")
         .map(map.mapService);
     }, "getAdvisoryServices");
     return list.length ? list.sort((a, b) => a.order - b.order) : mockAdvisoryServices;

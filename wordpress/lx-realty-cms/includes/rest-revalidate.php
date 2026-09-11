@@ -59,6 +59,7 @@ function lxr_collection_tag_for_post_type( string $post_type ): ?string {
 		'lxr_partner'     => 'partners',
 		'lxr_award'       => 'awards',
 		'lxr_value'       => 'values',
+		'lxr_setting'     => 'settings',
 	);
 	return $map[ $post_type ] ?? null;
 }
@@ -96,19 +97,4 @@ add_action( 'delete_post', function ( $post_id ) {
 	if ( $tag ) {
 		lxr_revalidate( array( $tag ) );
 	}
-} );
-
-// ACF options page (Site Settings) saved.
-add_action( 'acf/save_post', function ( $post_id ) {
-	if ( 'options' === $post_id ) {
-		lxr_revalidate( array( 'settings' ) );
-	}
-}, 20 );
-
-// Menus edited (Appearance → Menus).
-add_action( 'wp_update_nav_menu', function () {
-	lxr_revalidate( array( 'navigation' ) );
-} );
-add_action( 'wp_delete_nav_menu', function () {
-	lxr_revalidate( array( 'navigation' ) );
 } );

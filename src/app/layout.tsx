@@ -3,7 +3,8 @@ import { Cormorant_Garamond, Inter } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
-import { getNavigation, getSiteSettings } from "@/lib/cms";
+import { getSiteSettings } from "@/lib/cms";
+import { footerColumns, mainNav } from "@/content/navigation";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -33,7 +34,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const [settings, nav] = await Promise.all([getSiteSettings(), getNavigation()]);
+  const settings = await getSiteSettings();
 
   return (
     <html
@@ -41,9 +42,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${cormorant.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-navy-900 text-[#f3f6fa]">
-        <SiteHeader settings={settings} nav={nav.primary} />
+        <SiteHeader settings={settings} nav={mainNav} />
         <main className="flex-1">{children}</main>
-        <SiteFooter settings={settings} columns={nav.footer} />
+        <SiteFooter settings={settings} columns={footerColumns} />
       </body>
     </html>
   );

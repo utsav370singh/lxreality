@@ -27,7 +27,7 @@ export default async function CareersPage() {
     <>
       <PageHero hero={page.hero} />
 
-      <Section tone="cream">
+      <Section tone="cream" edge="top">
         <Container>
           <SectionHeadingFrom intro={page.sections.why} align="center" tone="light" />
           <FeatureGrid items={careersWhy} columns={6} tone="light" variant="card" className="mt-10" />
@@ -72,7 +72,7 @@ export default async function CareersPage() {
         </Container>
       </Section>
 
-      <Section tone="navy" className="pt-0">
+      <Section tone="navy">
         <Container>
           <SectionHeadingFrom intro={page.sections.voices} />
           <Carousel className="mt-10" slideClassName="w-[300px] sm:w-[360px]" ariaLabel="What our people say">

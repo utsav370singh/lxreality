@@ -1,15 +1,12 @@
 import type {
   Award,
   CmsImage,
-  FooterColumn,
   Insight,
   Job,
   Leader,
-  NavItem,
-  Navigation,
   Office,
-  PageContent,
   Partner,
+  PageHero,
   Property,
   Resource,
   Service,
@@ -35,6 +32,15 @@ const decode = (s?: string | null) =>
 
 const PLACEHOLDER: CmsImage = { url: "/placeholder.svg", alt: "" };
 
+/**
+ * WPGraphQL for ACF returns every ACF `select` field as a list (to support
+ * multi-select uniformly), even when the field only ever holds one value —
+ * `segment`, `group`, `list`, `kind` all come back as e.g. `["commercial"]`
+ * rather than `"commercial"`. Unwrap to a plain string either way.
+ */
+export const selectValue = (v: unknown): string =>
+  Array.isArray(v) ? String(v[0] ?? "") : String(v ?? "");
+
 export function mapImage(node: any, fallbackAlt = ""): CmsImage {
   const n = node?.node ?? node;
   if (!n?.sourceUrl) return { ...PLACEHOLDER, alt: fallbackAlt };
@@ -46,31 +52,64 @@ export function mapImage(node: any, fallbackAlt = ""): CmsImage {
   };
 }
 
-const list = (rows: any[] | null | undefined, key = "item"): string[] =>
-  (rows ?? []).map((r) => decode(r?.[key])).filter(Boolean);
+/**
+ * ACF Free has no Repeater/Gallery field, so every "list" below is a plain
+ * Textarea the admin fills in one item per line (see the field's
+ * `instructions` text in includes/acf-fields.php for the exact format shown
+ * in wp-admin). These helpers turn that back into structured data.
+ */
 
-const labelList = (rows: any[] | null | undefined): string[] =>
-  (rows ?? []).map((r) => decode(r?.label)).filter(Boolean);
+/** One value per line — amenities, bullets, responsibilities, features, etc. */
+const lines = (text?: string | null): string[] =>
+  decode(text)
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
-const pairs = (rows: any[] | null | undefined) =>
-  (rows ?? [])
-    .map((r) => ({ label: decode(r?.label), value: decode(r?.value) }))
+/** Comma-separated short list — tags, topics. */
+const commaList = (text?: string | null): string[] =>
+  decode(text)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+/** One "Label: Value" pair per line — specifications, connectivity. */
+const linePairs = (text?: string | null) =>
+  lines(text)
+    .map((line) => {
+      const i = line.indexOf(":");
+      return i === -1
+        ? { label: line, value: "" }
+        : { label: line.slice(0, i).trim(), value: line.slice(i + 1).trim() };
+    })
     .filter((p) => p.label || p.value);
+
+/** One "Icon | Value | Label" stat per line — the global stat bar. */
+const statLines = (text?: string | null) =>
+  lines(text)
+    .map((line) => {
+      const [icon, value, label] = line.split("|").map((s) => s.trim());
+      return { icon: icon || undefined, value: value ?? "", label: label ?? "" };
+    })
+    .filter((s) => s.value || s.label);
 
 export function mapProperty(node: any): Property {
   const f = node.propertyFields ?? {};
+  const gallery = [f.gallery1, f.gallery2, f.gallery3, f.gallery4]
+    .filter((g) => g?.node)
+    .map((g) => mapImage(g, decode(node.title)));
   return {
     id: String(node.databaseId),
     slug: node.slug,
     title: decode(node.title),
-    segment: f.segment === "commercial" ? "commercial" : "residential",
+    segment: selectValue(f.segment) === "commercial" ? "commercial" : "residential",
     badge: f.badge || undefined,
     locality: decode(f.locality),
     city: decode(f.city),
     priceLabel: decode(f.priceLabel),
     image: mapImage(f.image, decode(node.title)),
-    gallery: (f.gallery?.nodes ?? []).map((g: any) => mapImage(g, decode(node.title))),
-    tags: labelList(f.tags),
+    gallery,
+    tags: commaList(f.tags),
     configuration: f.configuration || undefined,
     developer: f.developer || undefined,
     status: f.status || undefined,
@@ -79,9 +118,9 @@ export function mapProperty(node: any): Property {
     order: Number(f.displayOrder ?? 999),
     description: decode(f.description),
     overview: decode(f.overview),
-    amenities: list(f.amenities),
-    specifications: pairs(f.specifications),
-    connectivity: pairs(f.connectivity),
+    amenities: lines(f.amenities),
+    specifications: linePairs(f.specifications),
+    connectivity: linePairs(f.connectivity),
     brochureUrl: f.brochureUrl || undefined,
     location:
       f.locationLat && f.locationLng
@@ -118,8 +157,8 @@ export function mapJob(node: any): Job {
     experience: decode(f.experience),
     type: decode(f.type) || "Full-time",
     summary: decode(f.summary),
-    responsibilities: list(f.responsibilities),
-    requirements: list(f.requirements),
+    responsibilities: lines(f.responsibilities),
+    requirements: lines(f.requirements),
     applyUrl: f.applyUrl || "mailto:careers@lxrealty.in",
     postedAt: node.date,
   };
@@ -134,15 +173,15 @@ export function mapTestimonial(node: any): Testimonial {
     role: decode(f.personRole),
     photo: f.photo?.node ? mapImage(f.photo, decode(f.personName)) : undefined,
     rating: f.rating ? Number(f.rating) : undefined,
-    group: (f.group || "home").toLowerCase(),
+    group: (selectValue(f.group) || "home").toLowerCase(),
     order: Number(f.displayOrder ?? 999),
   };
 }
 
 export function mapInsight(node: any): Insight {
   const f = node.insightFields ?? {};
-  const kind =
-    f.kind === "perspective" ? "perspective" : f.kind === "report" ? "report" : "article";
+  const kindValue = selectValue(f.kind);
+  const kind = kindValue === "perspective" ? "perspective" : kindValue === "report" ? "report" : "article";
   return {
     id: String(node.databaseId),
     slug: node.slug,
@@ -157,7 +196,7 @@ export function mapInsight(node: any): Insight {
     author: decode(f.author) || undefined,
     authorRole: decode(f.authorRole) || undefined,
     authorPhoto: f.authorPhoto?.node ? mapImage(f.authorPhoto, decode(f.author)) : undefined,
-    topics: labelList(f.topics),
+    topics: commaList(f.topics),
   };
 }
 
@@ -183,7 +222,7 @@ export function mapService(node: any): Service {
     excerpt: decode(f.excerpt),
     icon: f.icon?.node ? mapImage(f.icon, `${decode(node.title)} icon`) : undefined,
     image: f.image?.node ? mapImage(f.image, decode(node.title)) : undefined,
-    bullets: list(f.bullets),
+    bullets: lines(f.bullets),
     order: Number(f.displayOrder ?? 999),
   };
 }
@@ -193,12 +232,12 @@ export function mapOffice(node: any): Office {
   return {
     id: String(node.databaseId),
     name: decode(node.title),
-    kind: f.kind === "corporate" ? "corporate" : "branch",
+    kind: selectValue(f.kind) === "corporate" ? "corporate" : "branch",
     address: decode(f.address),
     city: decode(f.city),
     phone: decode(f.phone),
     image: f.image?.node ? mapImage(f.image, decode(node.title)) : undefined,
-    features: list(f.features),
+    features: lines(f.features),
     mapEmbedUrl: f.mapEmbedUrl || undefined,
     directionsUrl: f.directionsUrl || undefined,
     order: Number(f.displayOrder ?? 999),
@@ -207,7 +246,7 @@ export function mapOffice(node: any): Office {
 
 export function mapPartner(node: any): Partner {
   const f = node.partnerFields ?? {};
-  const group = (f.group || "general").toLowerCase();
+  const group = (selectValue(f.group) || "general").toLowerCase();
   return {
     id: String(node.databaseId),
     name: decode(node.title),
@@ -258,135 +297,28 @@ export function mapSiteSettings(data: any): SiteSettings {
       facebook: s.facebook || undefined,
       youtube: s.youtube || undefined,
     },
-    stats: (s.stats ?? []).map((r: any) => ({
-      value: decode(r.value),
-      label: decode(r.label),
-      icon: r.icon || undefined,
-    })),
+    stats: statLines(s.stats),
   };
-}
-
-export function mapSitePage(node: any): PageContent {
-  const f = node.pageFields ?? {};
-  const sections: PageContent["sections"] = {};
-  for (const s of f.sections ?? []) {
-    if (!s?.slug) continue;
-    sections[s.slug] = {
-      eyebrow: decode(s.eyebrow) || undefined,
-      title: decode(s.title) || undefined,
-      titleAccent: decode(s.titleAccent) || undefined,
-      description: decode(s.description) || undefined,
-    };
-  }
-
-  return {
-    key: f.key,
-    hero: {
-      eyebrow: decode(f.heroEyebrow) || undefined,
-      title: decode(f.heroTitle),
-      titleAccent: decode(f.heroTitleAccent) || undefined,
-      description: decode(f.heroDescription) || undefined,
-      image: mapImage(f.heroImage, decode(f.heroTitle)),
-      breadcrumb: labelList(f.heroBreadcrumb),
-      features: (f.heroFeatures ?? []).map((x: any) => ({
-        icon: x.icon || undefined,
-        title: decode(x.title),
-        description: decode(x.description) || undefined,
-      })),
-      statsPanelTitle: decode(f.heroStatsPanelTitle) || undefined,
-      stats: (f.heroStats ?? []).map((x: any) => ({
-        value: decode(x.value),
-        label: decode(x.label),
-        icon: x.icon || undefined,
-      })),
-      primaryCta: f.heroPrimaryCtaLabel
-        ? { label: decode(f.heroPrimaryCtaLabel), href: f.heroPrimaryCtaHref || "#" }
-        : undefined,
-      secondaryCta: f.heroSecondaryCtaLabel
-        ? { label: decode(f.heroSecondaryCtaLabel), href: f.heroSecondaryCtaHref || "#" }
-        : undefined,
-    },
-    sections,
-    cta: f.ctaTitle
-      ? {
-          title: decode(f.ctaTitle),
-          titleAccent: decode(f.ctaTitleAccent) || undefined,
-          description: decode(f.ctaDescription) || undefined,
-          image: f.ctaImage?.node ? mapImage(f.ctaImage) : undefined,
-          primaryCta: f.ctaPrimaryLabel
-            ? { label: decode(f.ctaPrimaryLabel), href: f.ctaPrimaryHref || "#" }
-            : undefined,
-          secondaryCta: f.ctaSecondaryLabel
-            ? { label: decode(f.ctaSecondaryLabel), href: f.ctaSecondaryHref || "#" }
-            : undefined,
-        }
-      : undefined,
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/*  Navigation — WordPress' native menus, flat list -> one-level tree  */
-/* ------------------------------------------------------------------ */
-
-const navHref = (path?: string | null): string => {
-  if (!path) return "#";
-  if (/^https?:\/\//.test(path)) return path;
-  const withSlash = path.startsWith("/") ? path : `/${path}`;
-  return withSlash.length > 1 ? withSlash.replace(/\/+$/, "") : withSlash;
-};
-
-interface RawMenuNode {
-  databaseId: number;
-  parentDatabaseId: number | null;
-  label: string;
-  path: string | null;
-  description: string | null;
-  order: number | null;
-}
-
-const sortByOrder = (a: RawMenuNode, b: RawMenuNode) => (a.order ?? 0) - (b.order ?? 0);
-
-export function mapPrimaryNav(nodes: RawMenuNode[]): NavItem[] {
-  const sorted = [...nodes].sort(sortByOrder);
-  const byParent = new Map<number, RawMenuNode[]>();
-  for (const n of sorted) {
-    const key = n.parentDatabaseId ?? 0;
-    if (!byParent.has(key)) byParent.set(key, []);
-    byParent.get(key)!.push(n);
-  }
-  const toItem = (n: RawMenuNode): NavItem => {
-    const children = (byParent.get(n.databaseId) ?? []).map(toItem);
-    return {
-      label: decode(n.label),
-      href: navHref(n.path),
-      description: decode(n.description) || undefined,
-      children: children.length ? children : undefined,
-    };
-  };
-  return (byParent.get(0) ?? []).map(toItem);
 }
 
 /**
- * A top-level "footer" menu item becomes a column heading; its children
- * become the links in that column (build the column in Appearance → Menus by
- * nesting links under a parent item — the parent's own link is unused).
+ * A page's optional hero override (photo + copy) from its "Site Pages" post —
+ * everything else about the page (section intros, CTA, feature/stat rows)
+ * comes from src/content/site-pages.ts and never from WordPress. Returns only
+ * the fields that were actually filled in, so the caller can merge this over
+ * the static default without clobbering anything left blank.
  */
-export function mapFooterNav(nodes: RawMenuNode[]): FooterColumn[] {
-  const sorted = [...nodes].sort(sortByOrder);
-  const topLevel = sorted.filter((n) => !n.parentDatabaseId);
-  return topLevel
-    .map((col) => ({
-      title: decode(col.label),
-      links: sorted
-        .filter((n) => n.parentDatabaseId === col.databaseId)
-        .map((n) => ({ label: decode(n.label), href: navHref(n.path) })),
-    }))
-    .filter((col) => col.links.length > 0);
+export function mapPageHeroOverride(node: any): Partial<PageHero> & { hasImage: boolean } {
+  const f = node?.pageHeroFields ?? {};
+  const override: Partial<PageHero> & { hasImage: boolean } = { hasImage: false };
+  if (f.eyebrow) override.eyebrow = decode(f.eyebrow);
+  if (f.title) override.title = decode(f.title);
+  if (f.titleAccent) override.titleAccent = decode(f.titleAccent);
+  if (f.description) override.description = decode(f.description);
+  if (f.image?.node) {
+    override.image = mapImage(f.image, override.title);
+    override.hasImage = true;
+  }
+  return override;
 }
 
-export function mapNavigation(data: any): Navigation {
-  return {
-    primary: mapPrimaryNav(data?.primary?.nodes ?? []),
-    footer: mapFooterNav(data?.footer?.nodes ?? []),
-  };
-}

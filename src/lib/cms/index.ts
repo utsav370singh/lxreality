@@ -37,7 +37,6 @@ function resolveProvider(): Promise<CmsProvider> {
 /* Thin pass-through helpers so pages can `import { getProperties } from "@/lib/cms"`. */
 
 export const getSiteSettings = () => resolveProvider().then((p) => p.getSiteSettings());
-export const getNavigation = () => resolveProvider().then((p) => p.getNavigation());
 export const getPage = (key: PageKey) => resolveProvider().then((p) => p.getPage(key));
 
 export const getProperties = (q?: PropertyQuery) =>

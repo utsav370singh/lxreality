@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight, Check, ShieldCheck } from "lucide-react";
+import { SelectField } from "@/components/ui/select-field";
 
 const SUBJECTS = [
   "General Enquiry",
@@ -15,11 +16,19 @@ const SUBJECTS = [
 
 export function ContactForm() {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [subjectMissing, setSubjectMissing] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setState("loading");
     const data = Object.fromEntries(new FormData(e.currentTarget).entries());
+    // The subject picker is a custom listbox (see SelectField), not a native
+    // <select>, so its hidden input isn't covered by HTML5 `required` — check by hand.
+    if (!data.subject) {
+      setSubjectMissing(true);
+      return;
+    }
+    setSubjectMissing(false);
+    setState("loading");
     try {
       const res = await fetch("/api/lead", {
         method: "POST",
@@ -54,16 +63,15 @@ export function ContactForm() {
         <input name="phone" required placeholder="Phone Number*" className={field} />
       </div>
       <input name="email" type="email" required placeholder="Email Address*" className={field} />
-      <select name="subject" required defaultValue="" className={field}>
-        <option value="" disabled className="bg-navy-900">
-          Subject*
-        </option>
-        {SUBJECTS.map((s) => (
-          <option key={s} className="bg-navy-900">
-            {s}
-          </option>
-        ))}
-      </select>
+      <div>
+        <SelectField
+          name="subject"
+          label="Subject*"
+          placeholder="Select a subject"
+          options={SUBJECTS.map((s) => ({ value: s, label: s }))}
+        />
+        {subjectMissing && <p className="mt-1.5 text-xs text-red-300">Please choose a subject.</p>}
+      </div>
       <textarea name="message" required rows={4} placeholder="Your Message*" className={field} />
       <div className="flex flex-wrap items-center gap-4">
         <button

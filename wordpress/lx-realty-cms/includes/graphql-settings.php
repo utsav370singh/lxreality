@@ -2,82 +2,39 @@
 /**
  * Global site settings.
  *
- * Editing UI  : an ACF options page ("LX Realty Settings") under the Site Pages menu.
- * GraphQL     : a hand-rolled `lxSiteSettings` root field with a stable shape that
- *               matches src/lib/cms/wordpress/fragments.ts (SITE_SETTINGS_QUERY).
- *
- * We resolve it ourselves rather than relying on WPGraphQL-for-ACF's options-page
- * mapping so the schema shape never drifts.
+ * Editing UI  : a single post under Settings → "LX Realty Settings" — an
+ *               ordinary post (see includes/post-types.php), standing in for
+ *               what would otherwise be an ACF Options Page (Pro-only).
+ * GraphQL     : a hand-rolled `lxSiteSettings` root field with a stable shape
+ *               that matches src/lib/cms/wordpress/fragments.ts
+ *               (SITE_SETTINGS_QUERY) — resolved from that one post's ACF
+ *               fields, whichever post it turns out to be.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/* ---- ACF options page + fields (admin editing only) ---- */
-add_action( 'acf/init', function () {
-	if ( ! function_exists( 'acf_add_options_page' ) ) {
-		return;
-	}
-
-	acf_add_options_page( array(
-		'page_title'  => 'LX Realty Settings',
-		'menu_title'  => 'LX Realty Settings',
-		'menu_slug'   => 'lxr-site-settings',
-		'parent_slug' => 'edit.php?post_type=lxr_sitepage',
-		'capability'  => 'manage_options',
+/** The one "Settings" post — whichever exists (the seeder creates exactly one). */
+function lxr_get_settings_post_id(): int {
+	$posts = get_posts( array(
+		'post_type'      => 'lxr_setting',
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'orderby'        => 'ID',
+		'order'          => 'ASC',
+		'fields'         => 'ids',
 	) );
+	return $posts ? (int) $posts[0] : 0;
+}
 
-	lxr_group(
-		'settings',
-		'Site Settings',
-		null,
-		'lxSiteSettingsFields',
-		array(
-			lxr_text( 'settings', 'companyName', 'Company name' ),
-			lxr_image( 'settings', 'logo', 'Logo' ),
-			lxr_text( 'settings', 'phone', 'Phone' ),
-			lxr_text( 'settings', 'email', 'Email' ),
-			lxr_text( 'settings', 'whatsapp', 'WhatsApp' ),
-			lxr_text( 'settings', 'website', 'Website (display text)' ),
-			lxr_textarea( 'settings', 'address', 'Address' ),
-			lxr_text( 'settings', 'officeHours', 'Office hours' ),
-			lxr_textarea( 'settings', 'footerBlurb', 'Footer blurb' ),
-			lxr_url( 'settings', 'linkedin', 'LinkedIn URL' ),
-			lxr_url( 'settings', 'instagram', 'Instagram URL' ),
-			lxr_url( 'settings', 'facebook', 'Facebook URL' ),
-			lxr_url( 'settings', 'youtube', 'YouTube URL' ),
-			lxr_repeater( 'settings', 'stats', 'Global stat bar', array(
-				lxr_text( 'stats_row', 'icon', 'Icon (lucide)' ),
-				lxr_text( 'stats_row', 'value', 'Value' ),
-				lxr_text( 'stats_row', 'label', 'Label' ),
-			) ),
-		),
-		array(
-			array(
-				array( 'param' => 'options_page', 'operator' => '==', 'value' => 'lxr-site-settings' ),
-			),
-		)
-	);
-} );
-
-/* ---- GraphQL: lxSiteSettings root field ---- */
 add_action( 'graphql_register_types', function () {
-
-	register_graphql_object_type( 'LXStat', array(
-		'description' => 'A value + label stat.',
-		'fields'      => array(
-			'icon'  => array( 'type' => 'String' ),
-			'value' => array( 'type' => 'String' ),
-			'label' => array( 'type' => 'String' ),
-		),
-	) );
 
 	register_graphql_object_type( 'LXMediaNode', array(
 		'fields' => array(
-			'sourceUrl'     => array( 'type' => 'String' ),
-			'altText'       => array( 'type' => 'String' ),
-			'mediaDetails'  => array( 'type' => 'LXMediaDetails' ),
+			'sourceUrl'    => array( 'type' => 'String' ),
+			'altText'      => array( 'type' => 'String' ),
+			'mediaDetails' => array( 'type' => 'LXMediaDetails' ),
 		),
 	) );
 	register_graphql_object_type( 'LXMediaDetails', array(
@@ -105,14 +62,16 @@ add_action( 'graphql_register_types', function () {
 			'facebook'    => array( 'type' => 'String' ),
 			'youtube'     => array( 'type' => 'String' ),
 			'logo'        => array( 'type' => 'LXMediaEdge' ),
-			'stats'       => array( 'type' => array( 'list_of' => 'LXStat' ) ),
+			// One "Icon | Value | Label" line per stat — see includes/acf-fields.php.
+			'stats'       => array( 'type' => 'String' ),
 		),
 	) );
 
 	register_graphql_field( 'RootQuery', 'lxSiteSettings', array(
 		'type'    => 'LXSiteSettings',
 		'resolve' => function () {
-			$get = fn( $k ) => function_exists( 'get_field' ) ? get_field( $k, 'option' ) : null;
+			$post_id = lxr_get_settings_post_id();
+			$get     = fn( $k ) => $post_id && function_exists( 'get_field' ) ? get_field( $k, $post_id ) : null;
 
 			$logo_id   = $get( 'logo' );
 			$logo_edge = null;
@@ -130,15 +89,6 @@ add_action( 'graphql_register_types', function () {
 				);
 			}
 
-			$stats = array();
-			foreach ( (array) $get( 'stats' ) as $row ) {
-				$stats[] = array(
-					'icon'  => $row['icon'] ?? '',
-					'value' => $row['value'] ?? '',
-					'label' => $row['label'] ?? '',
-				);
-			}
-
 			return array(
 				'companyName' => $get( 'companyName' ) ?: 'LX Realty',
 				'phone'       => $get( 'phone' ),
@@ -153,7 +103,7 @@ add_action( 'graphql_register_types', function () {
 				'facebook'    => $get( 'facebook' ),
 				'youtube'     => $get( 'youtube' ),
 				'logo'        => $logo_edge,
-				'stats'       => $stats,
+				'stats'       => $get( 'stats' ),
 			);
 		},
 	) );

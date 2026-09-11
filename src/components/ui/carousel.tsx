@@ -59,7 +59,12 @@ export function Carousel({
   );
 
   return (
-    <div className={cn("relative", className)} role="region" aria-roledescription="carousel" aria-label={ariaLabel}>
+    <div
+      className={cn("relative min-w-0", className)}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label={ariaLabel}
+    >
       <div
         ref={trackRef}
         className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-4 px-4 pb-2 sm:mx-0 sm:px-0 sm:scroll-px-0"

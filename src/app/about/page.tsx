@@ -47,7 +47,7 @@ export default async function AboutPage() {
       </Section>
 
       {/* Values */}
-      <Section tone="cream" className="pt-0">
+      <Section tone="cream">
         <Container>
           <SectionHeadingFrom intro={page.sections.values} tone="light" />
           <ul className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -83,7 +83,7 @@ export default async function AboutPage() {
       </Section>
 
       {/* Why choose */}
-      <section className="relative isolate overflow-hidden bg-navy-950 py-16 sm:py-20">
+      <section className="relative isolate overflow-hidden bg-navy-950 pt-6 pb-6 sm:pt-7 sm:pb-7 lg:pt-[30px] lg:pb-[30px]">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(120%_120%_at_85%_0%,rgba(44,90,131,0.35),transparent_55%)]" />
         <Container>
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1.6fr] lg:items-center">
@@ -116,7 +116,7 @@ export default async function AboutPage() {
       </Section>
 
       {/* Partners + awards */}
-      <Section tone="cream" className="pt-0" id="awards">
+      <Section tone="cream" edge="bottom" id="awards">
         <Container>
           <p className="eyebrow mb-6">{page.sections.partners?.eyebrow}</p>
           <PartnerMarquee partners={partners} tone="light" />

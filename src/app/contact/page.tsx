@@ -34,7 +34,7 @@ export default async function ContactPage() {
       <PageHero hero={page.hero} />
 
       {/* Get in touch */}
-      <Section tone="navy">
+      <Section tone="navy" edge="top">
         <Container>
           <SectionHeadingFrom intro={page.sections.getInTouch} align="center" />
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -52,7 +52,7 @@ export default async function ContactPage() {
 
       {/* Corporate office + map */}
       {corporate && (
-        <Section tone="navy" className="pt-0">
+        <Section tone="navy">
           <Container>
             <SectionHeadingFrom intro={page.sections.office} />
             <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_1.6fr]">
@@ -71,7 +71,7 @@ export default async function ContactPage() {
                 </ul>
               </div>
               {corporate.mapEmbedUrl && (
-                <div className="aspect-[16/10] min-h-[320px] overflow-hidden rounded-2xl border border-gold-500/15 bg-mist-100">
+                <div className="aspect-[4/3] w-full min-w-0 overflow-hidden rounded-2xl border border-gold-500/15 bg-mist-100 sm:aspect-[16/10] lg:min-h-[320px] lg:aspect-auto">
                   <iframe
                     src={corporate.mapEmbedUrl}
                     title="LX Realty corporate office map"
@@ -87,7 +87,7 @@ export default async function ContactPage() {
       )}
 
       {/* Branches */}
-      <Section tone="navy" className="pt-0">
+      <Section tone="navy">
         <Container>
           <p className="eyebrow mb-6">{page.sections.branches?.eyebrow}</p>
           <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -112,7 +112,7 @@ export default async function ContactPage() {
       </Section>
 
       {/* Form + enquire */}
-      <Section tone="navy-dark">
+      <Section tone="navy-dark" edge="bottom">
         <Container>
           <div className="grid gap-10 lg:grid-cols-2">
             <div>

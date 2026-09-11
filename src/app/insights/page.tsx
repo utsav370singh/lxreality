@@ -136,7 +136,7 @@ export default async function InsightsPage() {
       </Section>
 
       {/* Topics */}
-      <Section tone="cream" className="pt-0">
+      <Section tone="cream">
         <Container>
           <p className="eyebrow mb-6">{page.sections.topics?.eyebrow}</p>
           <ul className="flex flex-wrap gap-3">
@@ -157,7 +157,7 @@ export default async function InsightsPage() {
 
       {/* Newsletter */}
       {page.cta && (
-        <section className="relative isolate overflow-hidden bg-navy-950 py-16 sm:py-20">
+        <section className="relative isolate overflow-hidden bg-navy-950 pt-8 pb-8 sm:pt-9 sm:pb-9 lg:pt-10 lg:pb-10">
           {page.cta.image && (
             <div className="absolute inset-0 -z-10">
               <Image src={page.cta.image.url} alt="" fill sizes="100vw" className="object-cover opacity-25" />

@@ -2,11 +2,16 @@
 /**
  * ACF field groups (registered in code — no manual field creation needed).
  *
+ * Built entirely on the FREE version of Advanced Custom Fields — no Pro
+ * features (Repeater, Gallery, Flexible Content, Options Pages) anywhere.
+ * Any place that would naturally be a repeater instead uses a single Textarea
+ * where the admin fills in one item per line (the field's on-screen
+ * "instructions" text says exactly which format), parsed back into structured
+ * data by src/lib/cms/wordpress/map.ts on the Next.js side.
+ *
  * Each group sets `show_in_graphql` + `graphql_field_name`, so WPGraphQL for
  * ACF exposes it exactly as the Next.js fragments expect, e.g.
  *   query { properties { nodes { propertyFields { priceLabel image { node { sourceUrl } } } } } }
- *
- * Requires ACF PRO (repeater / gallery fields).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -27,27 +32,41 @@ function lxr_f( $group, $name, $label, $type, $extra = array() ) {
 	);
 }
 
-function lxr_text( $g, $n, $l, $e = array() )     { return lxr_f( $g, $n, $l, 'text', $e ); }
-function lxr_textarea( $g, $n, $l )               { return lxr_f( $g, $n, $l, 'textarea', array( 'rows' => 3 ) ); }
-function lxr_url( $g, $n, $l )                    { return lxr_f( $g, $n, $l, 'url' ); }
-function lxr_number( $g, $n, $l )                 { return lxr_f( $g, $n, $l, 'number', array( 'default_value' => 0 ) ); }
-function lxr_bool( $g, $n, $l )                   { return lxr_f( $g, $n, $l, 'true_false', array( 'ui' => 1 ) ); }
-function lxr_wysiwyg( $g, $n, $l )                { return lxr_f( $g, $n, $l, 'wysiwyg', array( 'media_upload' => 0, 'toolbar' => 'basic' ) ); }
-function lxr_image( $g, $n, $l )                  { return lxr_f( $g, $n, $l, 'image', array( 'return_format' => 'id', 'preview_size' => 'medium' ) ); }
-function lxr_gallery( $g, $n, $l )                { return lxr_f( $g, $n, $l, 'gallery', array( 'return_format' => 'id' ) ); }
+function lxr_text( $g, $n, $l, $e = array() ) { return lxr_f( $g, $n, $l, 'text', $e ); }
+function lxr_url( $g, $n, $l )                { return lxr_f( $g, $n, $l, 'url' ); }
+function lxr_number( $g, $n, $l )             { return lxr_f( $g, $n, $l, 'number', array( 'default_value' => 0 ) ); }
+function lxr_bool( $g, $n, $l )               { return lxr_f( $g, $n, $l, 'true_false', array( 'ui' => 1 ) ); }
+function lxr_wysiwyg( $g, $n, $l )            { return lxr_f( $g, $n, $l, 'wysiwyg', array( 'media_upload' => 0, 'toolbar' => 'basic' ) ); }
+function lxr_image( $g, $n, $l, $e = array() ) { return lxr_f( $g, $n, $l, 'image', array_merge( array( 'return_format' => 'id', 'preview_size' => 'medium' ), $e ) ); }
+
+function lxr_textarea( $g, $n, $l, $instructions = '', $rows = 3 ) {
+	return lxr_f( $g, $n, $l, 'textarea', array( 'rows' => $rows, 'instructions' => $instructions ) );
+}
+
+/** A short single-line, comma-separated list (tags, topics). */
+function lxr_comma_list( $g, $n, $l, $example ) {
+	return lxr_text( $g, $n, $l, array( 'instructions' => "Comma-separated. Example: {$example}" ) );
+}
+
+/** One value per line (amenities, bullets, responsibilities, requirements, features). */
+function lxr_line_list( $g, $n, $l, $example ) {
+	return lxr_textarea( $g, $n, $l, "One per line. Example:\n{$example}", 5 );
+}
+
+/** One "Label: Value" pair per line (specifications, connectivity). */
+function lxr_pair_list( $g, $n, $l, $example ) {
+	return lxr_textarea( $g, $n, $l, "One \"Label: Value\" pair per line. Example:\n{$example}", 5 );
+}
 
 /**
- * An image field restricted to SVG uploads — used for anything editors should
- * hand a designer-provided icon file for, instead of picking from a fixed
- * icon-font set. Requires SVG uploads to be enabled (see svg-uploads.php) and,
- * strongly recommended, an SVG-sanitizing plugin such as "Safe SVG" active.
+ * An SVG-only image field — the "admin can upload their own icon" field.
+ * Requires SVG uploads to be enabled (see svg-uploads.php) and, strongly
+ * recommended, an SVG-sanitizing plugin such as the free "Safe SVG" active.
  */
 function lxr_svg_icon( $g, $n, $l ) {
-	return lxr_f( $g, $n, $l, 'image', array(
-		'return_format' => 'id',
-		'preview_size'  => 'medium',
-		'mime_types'    => 'svg',
-		'instructions'  => 'Upload an SVG icon (square, transparent background works best). Any color the file already uses is kept as-is.',
+	return lxr_image( $g, $n, $l, array(
+		'mime_types'   => 'svg',
+		'instructions' => 'Upload an SVG icon (square, transparent background works best). Any color the file already uses is kept as-is.',
 	) );
 }
 
@@ -57,27 +76,6 @@ function lxr_select( $g, $n, $l, $choices, $default = '' ) {
 		'default_value' => $default,
 		'allow_null'    => 1,
 		'ui'            => 1,
-	) );
-}
-
-function lxr_repeater( $g, $n, $l, $sub_fields, $layout = 'table' ) {
-	return lxr_f( $g, $n, $l, 'repeater', array(
-		'layout'       => $layout,
-		'button_label' => 'Add row',
-		'sub_fields'   => $sub_fields,
-	) );
-}
-
-/** A repeater with a single "item" text line. */
-function lxr_list( $g, $n, $l ) {
-	return lxr_repeater( $g, $n, $l, array( lxr_text( "{$n}_row", 'item', 'Item' ) ) );
-}
-
-/** A repeater of label / value pairs. */
-function lxr_pairs( $g, $n, $l ) {
-	return lxr_repeater( $g, $n, $l, array(
-		lxr_text( "{$n}_row", 'label', 'Label' ),
-		lxr_text( "{$n}_row", 'value', 'Value' ),
 	) );
 }
 
@@ -125,11 +123,14 @@ add_action( 'acf/init', function () {
 		lxr_textarea( 'property', 'description', 'Short description (card / hero)' ),
 		lxr_wysiwyg( 'property', 'overview', 'Overview (detail page)' ),
 		lxr_image( 'property', 'image', 'Primary image' ),
-		lxr_gallery( 'property', 'gallery', 'Gallery' ),
-		lxr_repeater( 'property', 'tags', 'Tags / chips', array( lxr_text( 'tags_row', 'label', 'Label' ) ) ),
-		lxr_list( 'property', 'amenities', 'Amenities' ),
-		lxr_pairs( 'property', 'specifications', 'Specifications' ),
-		lxr_pairs( 'property', 'connectivity', 'Connectivity' ),
+		lxr_image( 'property', 'gallery1', 'Gallery image 1' ),
+		lxr_image( 'property', 'gallery2', 'Gallery image 2' ),
+		lxr_image( 'property', 'gallery3', 'Gallery image 3' ),
+		lxr_image( 'property', 'gallery4', 'Gallery image 4' ),
+		lxr_comma_list( 'property', 'tags', 'Tags / chips', '4 BHK, Luxury Living' ),
+		lxr_line_list( 'property', 'amenities', 'Amenities', "Infinity-edge swimming pool\nFully-equipped fitness studio" ),
+		lxr_pair_list( 'property', 'specifications', 'Specifications', "Configuration: 4 BHK + Utility\nPossession: Q4 2028" ),
+		lxr_pair_list( 'property', 'connectivity', 'Connectivity', "Airport: 35 – 45 min drive\nMetro: 8 – 12 min drive" ),
 		lxr_url( 'property', 'brochureUrl', 'Brochure URL' ),
 		lxr_text( 'property', 'locationLat', 'Latitude' ),
 		lxr_text( 'property', 'locationLng', 'Longitude' ),
@@ -153,8 +154,8 @@ add_action( 'acf/init', function () {
 		lxr_text( 'job', 'type', 'Type (e.g. Full-time)' ),
 		lxr_textarea( 'job', 'summary', 'Summary' ),
 		lxr_url( 'job', 'applyUrl', 'Apply URL (or mailto:)' ),
-		lxr_list( 'job', 'responsibilities', 'Responsibilities' ),
-		lxr_list( 'job', 'requirements', 'Requirements' ),
+		lxr_line_list( 'job', 'responsibilities', 'Responsibilities', "Deliver against quarterly targets.\nWork cross-functionally with other teams." ),
+		lxr_line_list( 'job', 'requirements', 'Requirements', "4–6 years of relevant experience.\nStrong communication skills." ),
 	) );
 
 	/* ---------------- Testimonial ---------------- */
@@ -182,7 +183,7 @@ add_action( 'acf/init', function () {
 		lxr_text( 'insight', 'readingTime', 'Reading time' ),
 		lxr_text( 'insight', 'author', 'Author' ),
 		lxr_text( 'insight', 'authorRole', 'Author role' ),
-		lxr_repeater( 'insight', 'topics', 'Topics', array( lxr_text( 'topics_row', 'label', 'Topic' ) ) ),
+		lxr_comma_list( 'insight', 'topics', 'Topics', 'Market Trends, Residential' ),
 		lxr_image( 'insight', 'image', 'Cover image' ),
 		lxr_image( 'insight', 'authorPhoto', 'Author photo' ),
 	) );
@@ -202,7 +203,7 @@ add_action( 'acf/init', function () {
 		lxr_svg_icon( 'service', 'icon', 'Icon' ),
 		lxr_select( 'service', 'list', 'List', array( 'main' => 'Main services grid', 'advisory' => 'Advisory page' ), 'main' ),
 		lxr_number( 'service', 'displayOrder', 'Display order' ),
-		lxr_list( 'service', 'bullets', 'Bullets' ),
+		lxr_line_list( 'service', 'bullets', 'Bullets', "Curated shortlists matched to your budget.\nIndependent, developer-agnostic recommendations." ),
 		lxr_image( 'service', 'image', 'Image' ),
 	) );
 
@@ -215,7 +216,7 @@ add_action( 'acf/init', function () {
 		lxr_url( 'office', 'mapEmbedUrl', 'Map embed URL' ),
 		lxr_url( 'office', 'directionsUrl', 'Directions URL' ),
 		lxr_number( 'office', 'displayOrder', 'Display order' ),
-		lxr_list( 'office', 'features', 'Features' ),
+		lxr_line_list( 'office', 'features', 'Features', "Prime location with excellent connectivity\nAmple parking available" ),
 		lxr_image( 'office', 'image', 'Image' ),
 	) );
 
@@ -238,54 +239,47 @@ add_action( 'acf/init', function () {
 
 	/* ---------------- Value ---------------- */
 	lxr_group( 'value', 'Value Details', 'lxr_value', 'valueFields', array(
-		lxr_text( 'value', 'icon', 'Icon name (lucide)' ),
+		lxr_text( 'value', 'icon', 'Icon name (lucide, e.g. ShieldCheck)' ),
 		lxr_textarea( 'value', 'description', 'Description' ),
 		lxr_number( 'value', 'displayOrder', 'Display order' ),
 	) );
 
-	/* ---------------- Site Page ---------------- */
-	lxr_group( 'page', 'Page Content', 'lxr_sitepage', 'pageFields', array(
-		lxr_select( 'page', 'key', 'Page key', array(
-			'home' => 'home', 'about' => 'about', 'services' => 'services',
-			'projects-residential' => 'projects-residential', 'projects-commercial' => 'projects-commercial',
-			'advisory' => 'advisory', 'advisory-post-handover' => 'advisory-post-handover',
-			'insights' => 'insights', 'careers' => 'careers', 'contact' => 'contact',
+	/*
+	 * ---------------- Site Page (hero override only) ----------------
+	 * Everything else about a page — section intros, the closing CTA,
+	 * feature/stat rows — lives in src/content/site-pages.ts, not here.
+	 * Leave any of these blank to keep the site's built-in default for that
+	 * page; the slug of this post (set by the seeder, or by you) must match
+	 * one of: home, about, services, projects-residential,
+	 * projects-commercial, advisory, advisory-post-handover, insights,
+	 * careers, contact.
+	 */
+	lxr_group( 'page-hero', 'Hero Override (optional)', 'lxr_sitepage', 'pageHeroFields', array(
+		lxr_image( 'page-hero', 'image', 'Hero background image' ),
+		lxr_text( 'page-hero', 'eyebrow', 'Eyebrow (small gold label)' ),
+		lxr_text( 'page-hero', 'title', 'Title' ),
+		lxr_text( 'page-hero', 'titleAccent', 'Title accent (gold part)' ),
+		lxr_textarea( 'page-hero', 'description', 'Description' ),
+	) );
+
+	/* ---------------- Settings (a single post — not an Options Page) ---------------- */
+	lxr_group( 'settings', 'Site Settings', 'lxr_setting', 'settingFields', array(
+		lxr_text( 'settings', 'companyName', 'Company name' ),
+		lxr_image( 'settings', 'logo', 'Logo' ),
+		lxr_text( 'settings', 'phone', 'Phone' ),
+		lxr_text( 'settings', 'email', 'Email' ),
+		lxr_text( 'settings', 'whatsapp', 'WhatsApp' ),
+		lxr_text( 'settings', 'website', 'Website (display text)' ),
+		lxr_textarea( 'settings', 'address', 'Address' ),
+		lxr_text( 'settings', 'officeHours', 'Office hours' ),
+		lxr_textarea( 'settings', 'footerBlurb', 'Footer blurb' ),
+		lxr_url( 'settings', 'linkedin', 'LinkedIn URL' ),
+		lxr_url( 'settings', 'instagram', 'Instagram URL' ),
+		lxr_url( 'settings', 'facebook', 'Facebook URL' ),
+		lxr_url( 'settings', 'youtube', 'YouTube URL' ),
+		lxr_f( 'settings', 'stats', 'Global stat bar', 'textarea', array(
+			'rows'         => 6,
+			'instructions' => "One \"Icon | Value | Label\" stat per line — icon is an optional lucide.dev icon name. Example:\nAward | 10+ | Years of Excellence\nUsers | 5000+ | Happy Clients",
 		) ),
-		lxr_text( 'page', 'heroEyebrow', 'Hero: eyebrow' ),
-		lxr_text( 'page', 'heroTitle', 'Hero: title' ),
-		lxr_text( 'page', 'heroTitleAccent', 'Hero: title accent (gold)' ),
-		lxr_textarea( 'page', 'heroDescription', 'Hero: description' ),
-		lxr_image( 'page', 'heroImage', 'Hero: background image' ),
-		lxr_text( 'page', 'heroStatsPanelTitle', 'Hero: stats panel title' ),
-		lxr_text( 'page', 'heroPrimaryCtaLabel', 'Hero: primary CTA label' ),
-		lxr_text( 'page', 'heroPrimaryCtaHref', 'Hero: primary CTA href' ),
-		lxr_text( 'page', 'heroSecondaryCtaLabel', 'Hero: secondary CTA label' ),
-		lxr_text( 'page', 'heroSecondaryCtaHref', 'Hero: secondary CTA href' ),
-		lxr_repeater( 'page', 'heroBreadcrumb', 'Hero: breadcrumb', array( lxr_text( 'bc_row', 'label', 'Label' ) ) ),
-		lxr_repeater( 'page', 'heroFeatures', 'Hero: feature row', array(
-			lxr_text( 'hf_row', 'icon', 'Icon' ),
-			lxr_text( 'hf_row', 'title', 'Title' ),
-			lxr_text( 'hf_row', 'description', 'Description' ),
-		) ),
-		lxr_repeater( 'page', 'heroStats', 'Hero: stats panel', array(
-			lxr_text( 'hs_row', 'icon', 'Icon' ),
-			lxr_text( 'hs_row', 'value', 'Value' ),
-			lxr_text( 'hs_row', 'label', 'Label' ),
-		) ),
-		lxr_repeater( 'page', 'sections', 'Section intros', array(
-			lxr_text( 'sec_row', 'slug', 'Slug (e.g. featured)' ),
-			lxr_text( 'sec_row', 'eyebrow', 'Eyebrow' ),
-			lxr_text( 'sec_row', 'title', 'Title' ),
-			lxr_text( 'sec_row', 'titleAccent', 'Title accent' ),
-			lxr_textarea( 'sec_row', 'description', 'Description' ),
-		), 'block' ),
-		lxr_text( 'page', 'ctaTitle', 'Closing CTA: title' ),
-		lxr_text( 'page', 'ctaTitleAccent', 'Closing CTA: title accent' ),
-		lxr_textarea( 'page', 'ctaDescription', 'Closing CTA: description' ),
-		lxr_text( 'page', 'ctaPrimaryLabel', 'Closing CTA: primary label' ),
-		lxr_text( 'page', 'ctaPrimaryHref', 'Closing CTA: primary href' ),
-		lxr_text( 'page', 'ctaSecondaryLabel', 'Closing CTA: secondary label' ),
-		lxr_text( 'page', 'ctaSecondaryHref', 'Closing CTA: secondary href' ),
-		lxr_image( 'page', 'ctaImage', 'Closing CTA: image' ),
 	) );
 } );

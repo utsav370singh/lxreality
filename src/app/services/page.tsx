@@ -27,7 +27,7 @@ export default async function ServicesPage() {
     <>
       <PageHero hero={page.hero} />
 
-      <Section tone="cream">
+      <Section tone="cream" edge="top">
         <Container>
           <SectionHeadingFrom intro={page.sections.services} tone="light" />
           <ul className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -81,7 +81,7 @@ export default async function ServicesPage() {
         </Container>
       </Section>
 
-      <Section tone="cream" className="pt-0">
+      <Section tone="cream">
         <Container>
           <p className="eyebrow mb-6">{page.sections.partners?.eyebrow}</p>
           <PartnerMarquee partners={partners} tone="light" />

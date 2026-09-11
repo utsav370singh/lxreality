@@ -186,7 +186,7 @@ export default async function PropertyDetailPage({
 
       {/* Location */}
       {property.location?.mapEmbedUrl && (
-        <Section tone="cream" className="pt-0">
+        <Section tone="cream">
           <Container>
             <SectionHeading eyebrow="Location" title={`${property.locality}, ${property.city}`} tone="light" as="h2" />
             <div className="mt-6 aspect-[16/7] overflow-hidden rounded-2xl border border-ink-900/10 bg-mist-100">
@@ -204,7 +204,7 @@ export default async function PropertyDetailPage({
 
       {/* Related */}
       {related.length > 0 && (
-        <Section tone="navy">
+        <Section tone="navy" edge="bottom">
           <Container>
             <SectionHeading eyebrow="More Projects" title={`Other ${segmentLabel} Projects`} as="h2" />
             <Carousel className="mt-10" slideClassName="w-[280px]" ariaLabel="Related projects">

@@ -23,11 +23,12 @@ import { FeatureGrid } from "@/components/sections/feature-grid";
 import { whyChooseResults } from "@/content/page-extras";
 
 export default async function HomePage() {
-  const [page, settings, featured, services, insights, testimonials, partners, awards] =
+  const [page, settings, featured, allProperties, services, insights, testimonials, partners, awards] =
     await Promise.all([
       getPage("home"),
       getSiteSettings(),
       getProperties({ featured: true, limit: 6 }),
+      getProperties(),
       getServices(),
       getInsights({ kind: "article", limit: 4 }),
       getTestimonials("home"),
@@ -35,12 +36,14 @@ export default async function HomePage() {
       getAwards(),
     ]);
 
+  const locations = Array.from(new Set(allProperties.map((p) => p.city))).sort();
+
   return (
     <>
-      <HomeHero hero={page.hero} stats={settings.stats} />
+      <HomeHero hero={page.hero} stats={settings.stats} locations={locations} />
 
       {/* Featured projects */}
-      <Section tone="cream">
+      <Section tone="cream" edge="top">
         <Container>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionHeadingFrom intro={page.sections.featured} tone="light" />
@@ -62,7 +65,7 @@ export default async function HomePage() {
       </Section>
 
       {/* Services */}
-      <Section tone="cream" className="pt-0">
+      <Section tone="cream">
         <Container>
           <SectionHeadingFrom intro={page.sections.services} tone="light" />
           <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -83,7 +86,7 @@ export default async function HomePage() {
       </Section>
 
       {/* Why choose */}
-      <section className="relative isolate overflow-hidden bg-navy-950 py-16 sm:py-20">
+      <section className="relative isolate overflow-hidden bg-navy-950 pt-6 pb-6 sm:pt-7 sm:pb-7 lg:pt-[30px] lg:pb-[30px]">
         <div className="absolute inset-0 -z-10">
           <Image src={page.cta?.image?.url ?? "/placeholder.svg"} alt="" fill sizes="100vw" className="object-cover opacity-20" />
           <div className="absolute inset-0 bg-gradient-to-r from-navy-950 to-navy-950/70" />
@@ -117,7 +120,7 @@ export default async function HomePage() {
       </Section>
 
       {/* Partners + awards */}
-      <Section tone="cream" className="pt-0">
+      <Section tone="cream">
         <Container>
           <p className="eyebrow mb-6">{page.sections.partners?.eyebrow}</p>
           <PartnerMarquee partners={partners} tone="light" />

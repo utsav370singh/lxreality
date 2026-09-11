@@ -8,14 +8,19 @@
  * License:           GPL-2.0-or-later
  * Text Domain:       lx-realty-cms
  *
- * Dependencies (install & activate these first):
- *   - WPGraphQL                     https://wordpress.org/plugins/wp-graphql/
- *   - Advanced Custom Fields PRO    https://www.advancedcustomfields.com/pro/
- *   - WPGraphQL for ACF (v2)        https://wordpress.org/plugins/wpgraphql-acf/
+ * Dependencies — all free, no paid plugin or plan required:
+ *   - WPGraphQL                          https://wordpress.org/plugins/wp-graphql/
+ *   - Advanced Custom Fields (free)      https://wordpress.org/plugins/advanced-custom-fields/
+ *   - WPGraphQL for ACF                  https://wordpress.org/plugins/wpgraphql-acf/
  *
  * Recommended:
- *   - Safe SVG                      https://wordpress.org/plugins/safe-svg/
+ *   - Safe SVG                           https://wordpress.org/plugins/safe-svg/
  *     (sanitizes the SVG icon uploads this plugin enables — see includes/svg-uploads.php)
+ *
+ * Note: on WordPress.com specifically, installing ANY plugin — including
+ * these free ones — requires the Business plan or higher. That's a
+ * WordPress.com hosting restriction, unrelated to plugin pricing. See
+ * wordpress/README.md for self-hosted alternatives that are free end-to-end.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -34,7 +39,7 @@ add_action( 'admin_notices', function () {
 		$missing[] = 'WPGraphQL';
 	}
 	if ( ! function_exists( 'acf_add_local_field_group' ) ) {
-		$missing[] = 'Advanced Custom Fields PRO';
+		$missing[] = 'Advanced Custom Fields';
 	}
 	if ( ! class_exists( 'WPGraphQL\ACF\ACF' ) && ! function_exists( 'wpgraphql_acf_init' ) && ! defined( 'WPGRAPHQL_FOR_ACF_VERSION' ) ) {
 		$missing[] = 'WPGraphQL for ACF';
@@ -46,7 +51,6 @@ add_action( 'admin_notices', function () {
 } );
 
 require_once LXR_CMS_DIR . 'includes/post-types.php';
-require_once LXR_CMS_DIR . 'includes/menus.php';
 require_once LXR_CMS_DIR . 'includes/svg-uploads.php';
 require_once LXR_CMS_DIR . 'includes/acf-fields.php';
 require_once LXR_CMS_DIR . 'includes/graphql-settings.php';

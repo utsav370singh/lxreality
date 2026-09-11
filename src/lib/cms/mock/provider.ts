@@ -6,7 +6,6 @@ import type {
   PropertyQuery,
 } from "../types";
 import { siteSettings } from "./site";
-import { navigation } from "./navigation";
 import { sitePages } from "@/content/site-pages";
 import { properties } from "./properties";
 import {
@@ -34,10 +33,6 @@ const allInsights = [...insights, ...perspectives];
 export const mockProvider: CmsProvider = {
   async getSiteSettings() {
     return clone(siteSettings);
-  },
-
-  async getNavigation() {
-    return clone(navigation);
   },
 
   async getPage(key: PageKey) {

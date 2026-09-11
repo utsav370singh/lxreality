@@ -1,0 +1,10 @@
+/*
+Theme Name:   LX Realty Headless
+Description:  Minimal do-nothing theme. WordPress requires an active theme,
+              but this site is headless — every page is rendered by the
+              Next.js app in the repo root, which talks to WordPress only
+              through WPGraphQL. This theme has no templates of its own.
+Author:       LX Realty
+Version:      1.0.0
+Text Domain:  lx-realty-headless
+*/

@@ -138,6 +138,7 @@ export const RESOURCE_FIELDS = /* GraphQL */ `
       description
       fileUrl
       fileSize
+      topics
       image { node { ...ImageFields } }
     }
   }

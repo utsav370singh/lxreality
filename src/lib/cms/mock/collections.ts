@@ -414,6 +414,7 @@ export const resources: Resource[] = [
     image: img("resource-market-report", 800, 560, "India Real Estate Market Report 2024"),
     fileUrl: "#",
     fileSize: "PDF 5.2 MB",
+    topics: ["Market Trends", "Investment"],
   },
   {
     id: "r-smart-real-estate",
@@ -423,6 +424,7 @@ export const resources: Resource[] = [
     image: img("resource-smart", 800, 560, "The Future of Smart Real Estate"),
     fileUrl: "#",
     fileSize: "PDF 3.8 MB",
+    topics: ["Technology", "Market Trends"],
   },
   {
     id: "r-quarterly-update-q1",
@@ -432,6 +434,7 @@ export const resources: Resource[] = [
     image: img("resource-quarterly", 800, 560, "Quarterly Market Update Q1 2024"),
     fileUrl: "#",
     fileSize: "PDF 2.4 MB",
+    topics: ["Market Trends", "Commercial", "Residential"],
   },
   {
     id: "r-investor-guide",
@@ -441,6 +444,7 @@ export const resources: Resource[] = [
     image: img("resource-guide", 800, 560, "Investor's Guide to Real Estate in India"),
     fileUrl: "#",
     fileSize: "PDF 4.6 MB",
+    topics: ["Investment", "Policy & Economy"],
   },
 ];
 

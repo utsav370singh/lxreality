@@ -9,9 +9,8 @@ import { StatBar } from "@/components/ui/stat-bar";
 import { Carousel } from "@/components/ui/carousel";
 import { InsightCard } from "@/components/cards/insight-card";
 import { ArrowLink } from "@/components/ui/arrow-link";
-import { Icon } from "@/components/ui/icon";
 import { NewsletterForm } from "@/components/forms/newsletter-form";
-import { insightTopics } from "@/content/page-extras";
+import { InsightsBrowser } from "@/components/insights/insights-browser";
 
 export const revalidate = 300;
 export const metadata: Metadata = { title: "Insights" };
@@ -24,12 +23,18 @@ const INSIGHTS_STAT_BAR = [
   { value: "15+", label: "Years of Market Intelligence", icon: "Award" },
 ];
 
-export default async function InsightsPage() {
-  const [page, articles, perspectives, resources] = await Promise.all([
+export default async function InsightsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topic?: string }>;
+}) {
+  const [page, articles, perspectives, resources, allInsights, { topic }] = await Promise.all([
     getPage("insights"),
     getInsights({ kind: "article", limit: 4 }),
     getInsights({ kind: "perspective" }),
     getResources(),
+    getInsights(),
+    searchParams,
   ]);
 
   return (
@@ -48,7 +53,7 @@ export default async function InsightsPage() {
           <div className="grid gap-8 lg:grid-cols-[0.8fr_2.2fr]">
             <div>
               <SectionHeadingFrom intro={page.sections.market} tone="light" />
-              <ArrowLink href="/insights#all" tone="light" className="mt-6">
+              <ArrowLink href="/insights#topics" tone="light" className="mt-6">
                 View All Insights
               </ArrowLink>
             </div>
@@ -99,7 +104,7 @@ export default async function InsightsPage() {
           <div className="grid gap-8 lg:grid-cols-[0.8fr_2.2fr]">
             <div>
               <SectionHeadingFrom intro={page.sections.resources} tone="light" />
-              <ArrowLink href="/insights#resources" tone="light" className="mt-6">
+              <ArrowLink href="/insights#topics" tone="light" className="mt-6">
                 View All Resources
               </ArrowLink>
             </div>
@@ -135,23 +140,13 @@ export default async function InsightsPage() {
         </Container>
       </Section>
 
-      {/* Topics */}
-      <Section tone="cream">
+      {/* Topics — the full library, filterable by tag */}
+      <Section tone="cream" id="topics">
         <Container>
-          <p className="eyebrow mb-6">{page.sections.topics?.eyebrow}</p>
-          <ul className="flex flex-wrap gap-3">
-            {insightTopics.map((t) => (
-              <li key={t.label}>
-                <Link
-                  href={`/insights?topic=${encodeURIComponent(t.label)}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-ink-900/15 bg-white px-4 py-2 text-sm text-ink-700 hover:border-gold-500/50"
-                >
-                  <Icon name={t.icon} className="size-4 text-gold-500" strokeWidth={1.5} aria-hidden />
-                  {t.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <SectionHeadingFrom intro={page.sections.topics} tone="light" />
+          <div className="mt-8">
+            <InsightsBrowser insights={allInsights} resources={resources} initialTopic={topic} />
+          </div>
         </Container>
       </Section>
 

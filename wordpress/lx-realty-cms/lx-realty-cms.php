@@ -55,6 +55,7 @@ require_once LXR_CMS_DIR . 'includes/svg-uploads.php';
 require_once LXR_CMS_DIR . 'includes/acf-fields.php';
 require_once LXR_CMS_DIR . 'includes/graphql-settings.php';
 require_once LXR_CMS_DIR . 'includes/rest-revalidate.php';
+require_once LXR_CMS_DIR . 'includes/rest-leads.php';
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once LXR_CMS_DIR . 'includes/seed.php';

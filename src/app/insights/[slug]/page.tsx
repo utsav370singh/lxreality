@@ -80,7 +80,7 @@ export default async function InsightDetailPage({
               {insight.topics.map((t) => (
                 <Link
                   key={t}
-                  href={`/insights?topic=${encodeURIComponent(t)}`}
+                  href={`/insights?topic=${encodeURIComponent(t)}#topics`}
                   className="rounded-full border border-ink-900/15 bg-white px-3 py-1 text-xs text-ink-700"
                 >
                   {t}

@@ -210,6 +210,7 @@ export function mapResource(node: any): Resource {
     image: mapImage(f.image, decode(node.title)),
     fileUrl: f.fileUrl || "#",
     fileSize: decode(f.fileSize),
+    topics: commaList(f.topics),
   };
 }
 

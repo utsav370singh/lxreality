@@ -46,7 +46,9 @@ export function Section({
   const bottomPad =
     edge === "bottom" || edge === "both" ? "pb-8 sm:pb-9 lg:pb-10" : "pb-6 sm:pb-7 lg:pb-[30px]";
   return (
-    <section id={id} className={cn(topPad, bottomPad, tones[tone], className)}>
+    // scroll-mt-24: when this section is an anchor-jump target (id="..."), leave
+    // room for the fixed header so its heading doesn't land hidden behind it.
+    <section id={id} className={cn("scroll-mt-24", topPad, bottomPad, tones[tone], className)}>
       {children}
     </section>
   );

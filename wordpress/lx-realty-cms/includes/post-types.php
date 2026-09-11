@@ -62,5 +62,32 @@ function lxr_register_post_types() {
 			)
 		);
 	}
+
+	/*
+	 * Leads (contact form + newsletter submissions) — deliberately NOT like the
+	 * types above: this holds visitor PII (name/phone/email/message), so it's
+	 * private (no public URL, no REST, no GraphQL exposure). Only visible in
+	 * wp-admin to logged-in users who can edit posts. Written to exclusively by
+	 * includes/rest-leads.php, which the Next.js /api/lead route calls
+	 * server-to-server.
+	 */
+	register_post_type( 'lxr_lead', array(
+		'labels'          => array(
+			'name'          => 'Leads',
+			'singular_name' => 'Lead',
+			'menu_name'     => 'Leads',
+			'all_items'     => 'All Leads',
+		),
+		'public'          => false,
+		'show_ui'         => true,
+		'show_in_menu'    => true,
+		'has_archive'     => false,
+		'show_in_rest'    => false,
+		'show_in_graphql' => false,
+		'menu_icon'       => 'dashicons-email-alt',
+		'menu_position'   => 26,
+		'supports'        => array( 'title' ),
+		'capability_type' => 'post',
+	) );
 }
 add_action( 'init', 'lxr_register_post_types' );

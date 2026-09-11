@@ -202,6 +202,8 @@ export interface Resource {
   image: CmsImage;
   fileUrl: string;
   fileSize: string;
+  /** Shares the same topic vocabulary as Insight, so both browse together. */
+  topics: string[];
 }
 
 export interface Service {

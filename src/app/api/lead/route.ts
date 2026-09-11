@@ -3,10 +3,46 @@ import { NextResponse } from "next/server";
 /**
  * Lead capture endpoint for the contact + newsletter forms.
  *
- * For now it validates and logs. To deliver leads, forward `payload` to your
- * CRM / email service here (or to a WordPress endpoint, e.g. a Contact Form 7
- * or Gravity Forms REST route), then keep the same JSON response shape.
+ * Always logs locally, and — when WordPress is configured — saves the lead
+ * there too as an `lxr_lead` post (wp-admin → Leads), via
+ * wordpress/lx-realty-cms/includes/rest-leads.php. The WordPress write is
+ * best-effort: if it fails or isn't configured, the visitor still gets a
+ * success response (their submission isn't lost from their point of view —
+ * it's in the server log either way) rather than being told to resubmit.
  */
+
+function leadsEndpoint(): string | null {
+  const apiUrl = process.env.WORDPRESS_API_URL;
+  if (!apiUrl) return null;
+  try {
+    return new URL("/wp-json/lxr/v1/leads", apiUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
+async function saveToWordPress(payload: Record<string, unknown>) {
+  const endpoint = leadsEndpoint();
+  const secret = process.env.WORDPRESS_LEADS_SECRET;
+  if (!endpoint || !secret) return;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-lxr-leads-secret": secret },
+      body: JSON.stringify(payload),
+      // Never cache a write, and don't let a slow/unreachable WP hang the request.
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      console.error("[lead] WordPress save failed:", res.status, await res.text().catch(() => ""));
+    }
+  } catch (err) {
+    console.error("[lead] WordPress unreachable:", (err as Error).message);
+  }
+}
+
 export async function POST(request: Request) {
   let payload: Record<string, unknown>;
   try {
@@ -20,13 +56,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "A valid email is required." }, { status: 422 });
   }
 
-  console.info("[lead]", {
-    type: payload.type ?? "contact",
-    name: payload.name ?? null,
+  const record = {
+    type: payload.type === "newsletter" ? "newsletter" : "contact",
+    name: String(payload.name ?? ""),
+    phone: String(payload.phone ?? ""),
     email,
-    subject: payload.subject ?? null,
-    at: new Date().toISOString(),
-  });
+    subject: String(payload.subject ?? ""),
+    message: String(payload.message ?? ""),
+  };
+
+  console.info("[lead]", { ...record, at: new Date().toISOString() });
+
+  // Fire-and-forget from the visitor's perspective, but keep the function alive
+  // long enough on the server for the write to actually complete.
+  await saveToWordPress(record);
 
   return NextResponse.json({ ok: true });
 }

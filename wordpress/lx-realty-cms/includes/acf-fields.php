@@ -194,6 +194,7 @@ add_action( 'acf/init', function () {
 		lxr_textarea( 'resource', 'description', 'Description' ),
 		lxr_url( 'resource', 'fileUrl', 'File URL (upload to Media, paste link)' ),
 		lxr_text( 'resource', 'fileSize', 'File size label (e.g. PDF 3.8 MB)' ),
+		lxr_comma_list( 'resource', 'topics', 'Topics', 'Market Trends, Investment' ),
 		lxr_image( 'resource', 'image', 'Cover image' ),
 	) );
 
@@ -281,5 +282,29 @@ add_action( 'acf/init', function () {
 			'rows'         => 6,
 			'instructions' => "One \"Icon | Value | Label\" stat per line — icon is an optional lucide.dev icon name. Example:\nAward | 10+ | Years of Excellence\nUsers | 5000+ | Happy Clients",
 		) ),
+	) );
+
+	/*
+	 * ---------------- Leads ----------------
+	 * Not exposed to GraphQL (contains visitor PII) — see includes/post-types.php.
+	 * Written only by includes/rest-leads.php.
+	 */
+	acf_add_local_field_group( array(
+		'key'      => 'group_lxr_lead',
+		'title'    => 'Lead Details',
+		'fields'   => array(
+			lxr_select( 'lead', 'type', 'Type', array( 'contact' => 'Contact form', 'newsletter' => 'Newsletter signup' ), 'contact' ),
+			lxr_text( 'lead', 'name', 'Name' ),
+			lxr_text( 'lead', 'phone', 'Phone' ),
+			lxr_text( 'lead', 'email', 'Email' ),
+			lxr_text( 'lead', 'subject', 'Subject' ),
+			lxr_textarea( 'lead', 'message', 'Message' ),
+		),
+		'location' => array(
+			array(
+				array( 'param' => 'post_type', 'operator' => '==', 'value' => 'lxr_lead' ),
+			),
+		),
+		'show_in_graphql' => 0,
 	) );
 } );

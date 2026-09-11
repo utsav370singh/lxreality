@@ -183,14 +183,3 @@ export const enquiryOptions = [
   "Market Insights",
   "Other Enquiries",
 ];
-
-export const insightTopics = [
-  { label: "Market Trends", icon: "TrendingUp" },
-  { label: "Residential", icon: "Home" },
-  { label: "Commercial", icon: "Building2" },
-  { label: "Investment", icon: "CircleDollarSign" },
-  { label: "Land & Plots", icon: "Map" },
-  { label: "Luxury Living", icon: "Gem" },
-  { label: "Policy & Economy", icon: "Landmark" },
-  { label: "Technology", icon: "Cpu" },
-];

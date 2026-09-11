@@ -34,7 +34,7 @@ export const mainNav: NavItem[] = [
   },
   { label: "Insights", href: "/insights" },
   { label: "Careers", href: "/careers" },
-  { label: "Contact", href: "/contact" },
+  // { label: "Contact", href: "/contact" },
 ];
 
 export const footerColumns: FooterColumn[] = [

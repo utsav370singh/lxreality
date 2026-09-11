@@ -547,12 +547,12 @@ class LXR_Seed_Command {
 
 	private function resources() {
 		$rows = array(
-			array( 'india-real-estate-market-report-2024', 'India Real Estate Market Report 2024', 'Research Report', 'Comprehensive analysis of market performance, trends, and forecasts.', 'PDF 5.2 MB' ),
-			array( 'future-of-smart-real-estate', 'The Future of Smart Real Estate', 'Whitepaper', 'How technology and innovation are transforming the real estate landscape.', 'PDF 3.8 MB' ),
-			array( 'quarterly-market-update-q1-2024', 'Quarterly Market Update – Q1 2024', 'Market Update', 'Key updates on residential, commercial, and land markets in India.', 'PDF 2.4 MB' ),
-			array( 'investors-guide-to-real-estate-in-india', "Investor's Guide to Real Estate in India", 'Guide', 'A practical guide for investors to make informed real estate investment decisions.', 'PDF 4.6 MB' ),
+			array( 'india-real-estate-market-report-2024', 'India Real Estate Market Report 2024', 'Research Report', 'Comprehensive analysis of market performance, trends, and forecasts.', 'PDF 5.2 MB', 'Market Trend, Residential Insights' ),
+			array( 'future-of-smart-real-estate', 'The Future of Smart Real Estate', 'Whitepaper', 'How technology and innovation are transforming the real estate landscape.', 'PDF 3.8 MB', 'Market Outlook' ),
+			array( 'quarterly-market-update-q1-2024', 'Quarterly Market Update – Q1 2024', 'Market Update', 'Key updates on residential, commercial, and land markets in India.', 'PDF 2.4 MB', 'Market Trend, Economy Watch' ),
+			array( 'investors-guide-to-real-estate-in-india', "Investor's Guide to Real Estate in India", 'Guide', 'A practical guide for investors to make informed real estate investment decisions.', 'PDF 4.6 MB', 'Residential Insights, Economy Watch' ),
 		);
-		foreach ( $rows as $i => [ $slug, $title, $type, $desc, $size ] ) {
+		foreach ( $rows as $i => [ $slug, $title, $type, $desc, $size, $topics ] ) {
 			$id = lxr_upsert( 'lxr_resource', "resource-{$slug}", array( 'post_title' => $title, 'menu_order' => $i ) );
 			$image = lxr_seed_image( lxr_picsum( "resource-{$slug}", 800, 560 ), $title );
 			lxr_set_fields( $id, array(
@@ -560,6 +560,7 @@ class LXR_Seed_Command {
 				'field_lxr_resource_description' => $desc,
 				'field_lxr_resource_fileUrl'     => '',
 				'field_lxr_resource_fileSize'    => $size,
+				'field_lxr_resource_topics'      => $topics,
 				'field_lxr_resource_image'       => $image,
 			) );
 		}

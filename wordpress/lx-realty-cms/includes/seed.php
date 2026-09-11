@@ -116,6 +116,109 @@ function lxr_seed_svg_icon( string $glyph, string $title ): int {
 	return (int) $id;
 }
 
+function lxr_pdf_escape( string $s ): string {
+	return str_replace( array( '\\', '(', ')' ), array( '\\\\', '\\(', '\\)' ), $s );
+}
+
+function lxr_pdf_wrap( string $text, int $width = 88 ): array {
+	$words = preg_split( '/\s+/', trim( $text ) );
+	$lines = array();
+	$line  = '';
+	foreach ( $words as $word ) {
+		$candidate = '' === $line ? $word : $line . ' ' . $word;
+		if ( strlen( $candidate ) > $width ) {
+			if ( '' !== $line ) {
+				$lines[] = $line;
+			}
+			$line = $word;
+		} else {
+			$line = $candidate;
+		}
+	}
+	if ( '' !== $line ) {
+		$lines[] = $line;
+	}
+	return $lines;
+}
+
+/**
+ * Build a minimal, real, openable single-page PDF (title + meta + wrapped
+ * body text) as raw bytes — no PDF library needed for a placeholder.
+ */
+function lxr_build_pdf( string $title, array $meta_lines, string $body ): string {
+	$content  = "BT /F2 20 Tf 60 730 Td (" . lxr_pdf_escape( $title ) . ") Tj ET\n";
+	$content .= "BT /F1 10 Tf 60 700 Td 14 TL\n";
+	foreach ( $meta_lines as $line ) {
+		$content .= '(' . lxr_pdf_escape( $line ) . ") Tj T*\n";
+	}
+	$content .= "ET\n";
+	$content .= "BT /F1 11 Tf 60 650 Td 16 TL\n";
+	foreach ( lxr_pdf_wrap( $body ) as $line ) {
+		$content .= '(' . lxr_pdf_escape( $line ) . ") Tj T*\n";
+	}
+	$content .= "ET\n";
+	$content .= "BT /F1 8 Tf 60 40 Td (LX Realty - sample document generated for demo purposes.) Tj ET\n";
+
+	$objects    = array();
+	$objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+	$objects[2] = '<< /Type /Pages /Kids [3 0 R] /Count 1 >>';
+	$objects[3] = '<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /MediaBox [0 0 612 792] /Contents 4 0 R >>';
+	$objects[4] = '<< /Length ' . strlen( $content ) . " >>\nstream\n" . $content . 'endstream';
+	$objects[5] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>';
+	$objects[6] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>';
+
+	$pdf     = "%PDF-1.4\n";
+	$offsets = array();
+	foreach ( $objects as $num => $body_str ) {
+		$offsets[ $num ] = strlen( $pdf );
+		$pdf             .= "{$num} 0 obj\n{$body_str}\nendobj\n";
+	}
+	$xref_offset = strlen( $pdf );
+	$count       = count( $objects ) + 1;
+	$pdf        .= "xref\n0 {$count}\n0000000000 65535 f \n";
+	for ( $i = 1; $i <= count( $objects ); $i++ ) {
+		$pdf .= sprintf( "%010d 00000 n \n", $offsets[ $i ] );
+	}
+	$pdf .= "trailer\n<< /Size {$count} /Root 1 0 R >>\nstartxref\n{$xref_offset}\n%%EOF";
+	return $pdf;
+}
+
+/**
+ * Write a placeholder PDF straight into the Media Library and return its
+ * public URL — cached by seed key like lxr_seed_image()/lxr_seed_svg_icon().
+ * An admin can replace the file in Media Library at any time; the resource's
+ * File URL field just needs to keep pointing at a real upload instead of "#".
+ */
+function lxr_seed_pdf( string $seed_key, string $title, array $meta_lines, string $body ): string {
+	$cache_key = 'lxr_seed_pdf_' . md5( $seed_key );
+	$existing  = get_option( $cache_key );
+	if ( $existing && get_post( $existing ) ) {
+		return wp_get_attachment_url( $existing );
+	}
+
+	$pdf      = lxr_build_pdf( $title, $meta_lines, $body );
+	$filename = sanitize_title( $title ) . '.pdf';
+	$upload   = wp_upload_bits( $filename, null, $pdf );
+	if ( ! empty( $upload['error'] ) ) {
+		WP_CLI::warning( "Could not write PDF for {$title}: {$upload['error']}" );
+		return '';
+	}
+
+	$id = wp_insert_attachment( array(
+		'post_mime_type' => 'application/pdf',
+		'post_title'     => $title,
+		'post_status'    => 'inherit',
+	), $upload['file'] );
+
+	if ( is_wp_error( $id ) ) {
+		WP_CLI::warning( "Could not attach PDF for {$title}: " . $id->get_error_message() );
+		return '';
+	}
+
+	update_option( $cache_key, $id );
+	return wp_get_attachment_url( $id );
+}
+
 function lxr_picsum( string $seed, int $w = 1200, int $h = 900 ): string {
 	return "https://picsum.photos/seed/" . rawurlencode( $seed ) . "/{$w}/{$h}";
 }
@@ -555,10 +658,16 @@ class LXR_Seed_Command {
 		foreach ( $rows as $i => [ $slug, $title, $type, $desc, $size, $topics ] ) {
 			$id = lxr_upsert( 'lxr_resource', "resource-{$slug}", array( 'post_title' => $title, 'menu_order' => $i ) );
 			$image = lxr_seed_image( lxr_picsum( "resource-{$slug}", 800, 560 ), $title );
+			$file_url = lxr_seed_pdf(
+				"resource-{$slug}",
+				$title,
+				array( "Type: {$type}", "File size: {$size}" ),
+				$desc . ' This sample document is a placeholder - replace it in Media Library with the real report to update the live download.'
+			);
 			lxr_set_fields( $id, array(
 				'field_lxr_resource_type'        => $type,
 				'field_lxr_resource_description' => $desc,
-				'field_lxr_resource_fileUrl'     => '',
+				'field_lxr_resource_fileUrl'     => $file_url,
 				'field_lxr_resource_fileSize'    => $size,
 				'field_lxr_resource_topics'      => $topics,
 				'field_lxr_resource_image'       => $image,

@@ -126,6 +126,9 @@ export default async function InsightsPage({
                       </span>
                       <a
                         href={r.fileUrl}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
                         aria-label={`Download ${r.title}`}
                         className="flex size-8 items-center justify-center rounded-full border border-ink-900/15 text-ink-700 hover:bg-ink-900/5"
                       >

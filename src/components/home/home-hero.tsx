@@ -8,11 +8,13 @@ import { Container } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { StatBar } from "@/components/ui/stat-bar";
 import { SelectField } from "@/components/ui/select-field";
-import { BUDGET_RANGES, PROPERTY_TYPE_OPTIONS } from "@/lib/property-filters";
+import { BUDGET_RANGES, SEGMENT_LABELS } from "@/lib/property-filters";
 import { cn } from "@/lib/utils";
 
-const TABS = ["Buy", "Rent", "Invest", "Commercial"] as const;
+const TABS = ["Buy", "Lease", "Invest"] as const;
 type Tab = (typeof TABS)[number];
+
+const PROPERTY_TYPE_OPTIONS = Object.values(SEGMENT_LABELS);
 
 export function HomeHero({
   hero,
@@ -25,7 +27,13 @@ export function HomeHero({
   locations: string[];
 }) {
   const [tab, setTab] = useState<Tab>("Buy");
-  const targetHref = tab === "Commercial" ? "/projects/commercial" : "/projects/residential";
+  const [propertyType, setPropertyType] = useState("");
+  const targetHref =
+    propertyType === "Commercial"
+      ? "/projects/commercial"
+      : propertyType === "Plots/Land"
+        ? "/projects/plots"
+        : "/projects/residential";
 
   return (
     <section className="relative isolate overflow-hidden hero-navy">
@@ -67,9 +75,10 @@ export function HomeHero({
           </div>
         </div>
 
-        {/* Search widget — tabs switch segment (Commercial -> commercial listings, everything
-            else -> residential); the fields are intentionally identical across tabs. Submitting
-            is a real GET navigation, so the results page receives ?location=&type=&budget=. */}
+        {/* Search widget — tabs are intent-only (Buy/Lease/Invest all search the same listings);
+            Property Type picks the segment and so the destination page (Residential/Commercial/
+            Plots & Land). Submitting is a real GET navigation, so the results page receives
+            ?location=&budget=. */}
         <form
           action={targetHref}
           method="get"
@@ -100,10 +109,11 @@ export function HomeHero({
               options={locations.map((loc) => ({ value: loc, label: loc }))}
             />
             <SelectField
-              name="type"
+              name="segment"
               label="Property Type"
               placeholder="Select Type"
               options={PROPERTY_TYPE_OPTIONS.map((t) => ({ value: t, label: t }))}
+              onChange={setPropertyType}
             />
             <SelectField
               name="budget"

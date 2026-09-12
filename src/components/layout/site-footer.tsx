@@ -30,7 +30,7 @@ export function SiteFooter({
           style={gridStyle}
         >
           <div className="sm:col-span-2 lg:col-span-1">
-            <Logo image={settings.logo} />
+            <Logo />
             <p className="mt-5 text-sm leading-relaxed text-mist-400">{settings.footerBlurb}</p>
             <div className="mt-6 flex gap-3">
               {Object.entries(socialIcons).map(([key, Icon]) => {

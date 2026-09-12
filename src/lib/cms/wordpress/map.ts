@@ -93,16 +93,19 @@ const statLines = (text?: string | null) =>
     })
     .filter((s) => s.value || s.label);
 
+const PROPERTY_SEGMENTS = new Set(["residential", "commercial", "plots"]);
+
 export function mapProperty(node: any): Property {
   const f = node.propertyFields ?? {};
   const gallery = [f.gallery1, f.gallery2, f.gallery3, f.gallery4]
     .filter((g) => g?.node)
     .map((g) => mapImage(g, decode(node.title)));
+  const seg = selectValue(f.segment);
   return {
     id: String(node.databaseId),
     slug: node.slug,
     title: decode(node.title),
-    segment: selectValue(f.segment) === "commercial" ? "commercial" : "residential",
+    segment: (PROPERTY_SEGMENTS.has(seg) ? seg : "residential") as Property["segment"],
     badge: f.badge || undefined,
     locality: decode(f.locality),
     city: decode(f.city),

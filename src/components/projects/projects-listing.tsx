@@ -16,11 +16,11 @@ import { Carousel } from "@/components/ui/carousel";
 import { PropertyCard } from "@/components/cards/property-card";
 import { FeatureGrid } from "@/components/sections/feature-grid";
 import { PartnerMarquee } from "@/components/sections/partner-marquee";
-import { TestimonialCard } from "@/components/cards/testimonial-card";
+import { AutoTestimonial } from "@/components/cards/auto-testimonial";
 import { CtaBand } from "@/components/sections/cta-band";
 import { ArrowLink } from "@/components/ui/arrow-link";
 import type { Feature } from "@/content/page-extras";
-import { filterProperties, hasActiveFilters, type PropertySearchParams } from "@/lib/property-filters";
+import { filterProperties, hasActiveFilters, SEGMENT_LABELS, type PropertySearchParams } from "@/lib/property-filters";
 
 const BUDGET_LABELS: Record<string, string> = {
   "0-3": "Up to ₹ 3 Cr",
@@ -35,7 +35,7 @@ export async function ProjectsListing({
   whyColumns,
   searchParams,
 }: {
-  pageKey: Extract<PageKey, "projects-residential" | "projects-commercial">;
+  pageKey: Extract<PageKey, "projects-residential" | "projects-commercial" | "projects-plots">;
   segment: PropertySegment;
   whyItems: Feature[];
   whyColumns: 5 | 6;
@@ -56,7 +56,6 @@ export async function ProjectsListing({
 
   const appliedFilters = [
     searchParams.location && { key: "location", label: searchParams.location },
-    searchParams.type && { key: "type", label: searchParams.type },
     searchParams.budget && { key: "budget", label: BUDGET_LABELS[searchParams.budget] ?? searchParams.budget },
   ].filter((f): f is { key: string; label: string } => Boolean(f));
 
@@ -116,7 +115,7 @@ export async function ProjectsListing({
                   href={`/projects/${segment}`}
                   className="mt-6 inline-flex items-center gap-2 rounded-lg gold-gradient px-6 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-navy-950"
                 >
-                  View All {segment === "commercial" ? "Commercial" : "Residential"} Projects
+                  View All {SEGMENT_LABELS[segment]} Projects
                 </Link>
               </div>
             )}
@@ -144,7 +143,12 @@ export async function ProjectsListing({
             <SectionHeadingFrom
               intro={{
                 eyebrow: "All Projects",
-                title: segment === "commercial" ? "Every Commercial Address We Represent" : "Every Home We Represent",
+                title:
+                  segment === "commercial"
+                    ? "Every Commercial Address We Represent"
+                    : segment === "plots"
+                      ? "Every Plot We Represent"
+                      : "Every Home We Represent",
               }}
               tone="light"
             />
@@ -179,7 +183,7 @@ export async function ProjectsListing({
           <Container>
             <p className="eyebrow mb-6">{page.sections.testimonials?.eyebrow ?? "What Our Clients Say"}</p>
             <div className="max-w-3xl">
-              <TestimonialCard testimonial={testimonials[0]} tone="light" />
+              <AutoTestimonial testimonials={testimonials} tone="light" />
             </div>
           </Container>
         </Section>

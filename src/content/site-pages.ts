@@ -152,8 +152,8 @@ export const sitePages: Record<PageKey, PageContent> = {
       ],
       statsPanelTitle: "Advisory by Numbers",
       stats: [
-        { value: "15Mn+", label: "Sq. Ft. Advisory Delivered", icon: "Building2" },
-        { value: "₹ 2000Cr+", label: "Assets Advised", icon: "Landmark" },
+        { value: "3.08 Mn+", label: "Sq. Ft. Advisory Delivered", icon: "Building2" },
+        { value: "₹ 4500Cr+", label: "Assets Advised", icon: "Landmark" },
         { value: "500+", label: "Clients Advised", icon: "Users" },
         { value: "25+", label: "Cities Covered", icon: "MapPin" },
       ],
@@ -313,6 +313,47 @@ export const sitePages: Record<PageKey, PageContent> = {
     },
   },
 
+  "projects-plots": {
+    key: "projects-plots",
+    hero: {
+      title: "Plots & Land.",
+      titleAccent: "Built on Your Terms.",
+      description:
+        "RERA-registered plots and land parcels in high-growth corridors — clear titles, transparent documentation, and the freedom to build at your own pace.",
+      image: img("plots-hero", 1920, 1200, "Aerial view of a plotted development with tree-lined roads"),
+      breadcrumb: ["Home", "Projects", "Plots/Land"],
+      features: [
+        { icon: "BadgeCheck", title: "Verified Titles", description: "Clear, RERA-registered documentation" },
+        { icon: "MapPin", title: "Prime Corridors", description: "Ahead of upcoming infrastructure" },
+        { icon: "Handshake", title: "Trusted Partners", description: "Collaborating with India's top developers" },
+      ],
+      stats: [
+        { value: "40+", label: "Plotted Developments", icon: "Building2" },
+        { value: "20+", label: "Cities Pan India", icon: "MapPin" },
+        { value: "500+", label: "Acres Transacted", icon: "Landmark" },
+        { value: "3,000+", label: "Plots Delivered", icon: "Home" },
+      ],
+      primaryCta: { label: "Explore Plots & Land", href: "#featured" },
+      secondaryCta: { label: "Watch Overview", href: "#" },
+    },
+    sections: {
+      featured: {
+        eyebrow: "Featured Plots & Land",
+        title: "Land That Holds Its Value",
+      },
+      why: { eyebrow: "Why Invest in Plots & Land with LX Realty?" },
+      partners: { eyebrow: "Our Developer Partners" },
+      testimonials: { eyebrow: "What Our Clients Say" },
+    },
+    cta: {
+      title: "Find the Right Plot",
+      titleAccent: "With The Right Guidance.",
+      description: "Our experts are here to help you find land that fits your plans and budget.",
+      image: img("cta-ripple", 1600, 500, "Water ripple"),
+      primaryCta: { label: "Connect With Our Experts", href: "/contact" },
+    },
+  },
+
   insights: {
     key: "insights",
     hero: {
@@ -383,11 +424,11 @@ export const sitePages: Record<PageKey, PageContent> = {
       ],
       statsPanelTitle: "LX Realty by Numbers",
       stats: [
-        { value: "10+", label: "Years of Excellence", icon: "Award" },
+        { value: "8+", label: "Years of Excellence", icon: "Award" },
         { value: "500+", label: "Team Members", icon: "Users" },
         { value: "25+", label: "Cities Presence", icon: "MapPin" },
-        { value: "2000Cr+", label: "Transactions Advisory", icon: "Landmark" },
-        { value: "15M+", label: "Sq. Ft. Advisory Delivered", icon: "Building2" },
+        { value: "4500Cr+", label: "Transactions Advisory", icon: "Landmark" },
+        { value: "3.08 Mn+", label: "Sq. Ft. Advisory Delivered", icon: "Building2" },
       ],
     },
     sections: {
@@ -437,11 +478,11 @@ export const sitePages: Record<PageKey, PageContent> = {
       ],
       statsPanelTitle: "LX Realty by Numbers",
       stats: [
-        { value: "15Mn+", label: "Sq. Ft. Advisory Delivered", icon: "Building2" },
-        { value: "₹ 2000Cr+", label: "Assets Advised", icon: "Landmark" },
-        { value: "5000+", label: "Happy Clients", icon: "Users" },
+        { value: "3.08 Mn+", label: "Sq. Ft. Advisory Delivered", icon: "Building2" },
+        { value: "₹ 4500Cr+", label: "Assets Advised", icon: "Landmark" },
+        { value: "2000+", label: "Happy Clients", icon: "Users" },
         { value: "25+", label: "Cities Covered", icon: "MapPin" },
-        { value: "10+", label: "Years of Excellence", icon: "Award" },
+        { value: "8+", label: "Years of Excellence", icon: "Award" },
       ],
     },
     sections: {

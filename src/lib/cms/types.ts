@@ -50,6 +50,7 @@ export type PageKey =
   | "services"
   | "projects-residential"
   | "projects-commercial"
+  | "projects-plots"
   | "advisory"
   | "advisory-post-handover"
   | "insights"
@@ -106,7 +107,7 @@ export interface PageContent {
 /*  Collections                                                        */
 /* ------------------------------------------------------------------ */
 
-export type PropertySegment = "residential" | "commercial";
+export type PropertySegment = "residential" | "commercial" | "plots";
 
 export interface Property {
   id: string;

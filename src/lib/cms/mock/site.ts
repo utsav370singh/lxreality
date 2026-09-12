@@ -17,10 +17,10 @@ export const siteSettings: SiteSettings = {
     youtube: "https://www.youtube.com/@lxrealty",
   },
   stats: [
-    { value: "10+", label: "Years of Excellence", icon: "Award" },
-    { value: "5000+", label: "Happy Clients", icon: "Users" },
+    { value: "8+", label: "Years of Excellence", icon: "Award" },
+    { value: "2000+", label: "Happy Clients", icon: "Users" },
     { value: "25+", label: "Cities Pan India", icon: "Building2" },
-    { value: "15Mn+", label: "Sq. Ft. Advisory", icon: "Handshake" },
-    { value: "₹ 2000Cr+", label: "Sales Facilitated", icon: "BarChart3" },
+    { value: "3.08 Mn+", label: "Sq. Ft. Advisory", icon: "Handshake" },
+    { value: "₹ 4500Cr+", label: "Sales Facilitated", icon: "BarChart3" },
   ],
 };

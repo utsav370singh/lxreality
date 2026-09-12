@@ -18,6 +18,7 @@ export const mainNav: NavItem[] = [
     children: [
       { label: "Residential Projects", href: "/projects/residential", description: "Homes across 58 cities" },
       { label: "Commercial Projects", href: "/projects/commercial", description: "Grade-A offices & retail" },
+      { label: "Plots & Land", href: "/projects/plots", description: "RERA-registered plots & land parcels" },
     ],
   },
   {
@@ -65,9 +66,9 @@ export const footerColumns: FooterColumn[] = [
     links: [
       { label: "Residential Projects", href: "/projects/residential" },
       { label: "Commercial Projects", href: "/projects/commercial" },
+      { label: "Plots & Land", href: "/projects/plots" },
       { label: "New Launches", href: "/projects/residential" },
       { label: "Luxury Projects", href: "/projects/residential" },
-      { label: "Ready to Move", href: "/projects/residential" },
       { label: "All Projects", href: "/projects/residential" },
     ],
   },

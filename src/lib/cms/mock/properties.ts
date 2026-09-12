@@ -33,8 +33,18 @@ const COMMERCIAL_AMENITIES = [
   "24×7 manned security & access control",
 ];
 
+const PLOTS_AMENITIES = [
+  "Gated entry with boundary wall",
+  "Tree-lined internal roads",
+  "Underground electrical & water lines",
+  "Rainwater harvesting pits",
+  "Landscaped central park",
+  "24×7 security with CCTV",
+];
+
 function build(seed: Seed): Property {
   const isResidential = seed.segment === "residential";
+  const isPlots = seed.segment === "plots";
   const location = seed.location
     ? {
         ...seed.location,
@@ -54,9 +64,9 @@ function build(seed: Seed): Property {
     overview:
       seed.overview ??
       `${seed.title} at ${seed.locality}, ${seed.city} is a ${
-        isResidential ? "landmark residential address" : "Grade-A commercial destination"
+        isResidential ? "landmark residential address" : isPlots ? "meticulously planned plotted development" : "Grade-A commercial destination"
       } developed by ${seed.developer ?? "a leading developer"}. ${seed.description} Every detail — from the master plan to the specification sheet — has been curated to protect and grow long-term value for owners and investors.`,
-    amenities: seed.amenities ?? (isResidential ? RESIDENTIAL_AMENITIES : COMMERCIAL_AMENITIES),
+    amenities: seed.amenities ?? (isResidential ? RESIDENTIAL_AMENITIES : isPlots ? PLOTS_AMENITIES : COMMERCIAL_AMENITIES),
     specifications:
       seed.specifications ??
       (isResidential
@@ -68,14 +78,23 @@ function build(seed: Seed): Property {
             { label: "Possession", value: "Q4 2028" },
             { label: "RERA", value: seed.reraId ?? "RERA-GGM-XXXX-2024" },
           ]
-        : [
-            { label: "Asset type", value: seed.tags.join(" · ") },
-            { label: "Typical floor plate", value: "22,000 – 45,000 sq. ft." },
-            { label: "Efficiency", value: "68% carpet efficiency" },
-            { label: "Certification", value: seed.status ?? "IGBC Gold pre-certified" },
-            { label: "Possession", value: "Q2 2027" },
-            { label: "RERA", value: seed.reraId ?? "RERA-GGM-XXXX-2024" },
-          ]),
+        : isPlots
+          ? [
+              { label: "Plot sizes", value: seed.tags.join(" · ") },
+              { label: "Total parcel", value: "12 acres" },
+              { label: "Road width", value: "24 – 60 ft. internal roads" },
+              { label: "Title status", value: "Clear & registration-ready" },
+              { label: "Possession", value: "Immediate" },
+              { label: "RERA", value: seed.reraId ?? "RERA-GGM-XXXX-2024" },
+            ]
+          : [
+              { label: "Asset type", value: seed.tags.join(" · ") },
+              { label: "Typical floor plate", value: "22,000 – 45,000 sq. ft." },
+              { label: "Efficiency", value: "68% carpet efficiency" },
+              { label: "Certification", value: seed.status ?? "IGBC Gold pre-certified" },
+              { label: "Possession", value: "Q2 2027" },
+              { label: "RERA", value: seed.reraId ?? "RERA-GGM-XXXX-2024" },
+            ]),
     connectivity:
       seed.connectivity ??
       [
@@ -228,7 +247,7 @@ const seeds: Seed[] = [
     developer: "Signature Global",
     status: "IGBC Gold pre-certified",
     reraId: "RERA-GGM-C-0421-2024",
-    featured: true,
+    featured: false,
     order: 1,
     description:
       "A mixed retail-and-office landmark on NH-8 with double-height showroom frontage and institutional-grade upper floors.",
@@ -248,7 +267,7 @@ const seeds: Seed[] = [
     developer: "M3M India",
     status: "LEED Gold certified",
     reraId: "RERA-GGM-C-0388-2023",
-    featured: true,
+    featured: false,
     order: 2,
     description:
       "Boutique office suites above a high-footfall high-street on Golf Course Extension Road, ideal for GCC and professional-services tenants.",
@@ -268,7 +287,7 @@ const seeds: Seed[] = [
     developer: "Godrej Properties",
     status: "IGBC certified",
     reraId: "UPRERAPRJ-C-XXXX-2024",
-    featured: true,
+    featured: false,
     order: 3,
     description:
       "A mixed-use riverfront development in the Noida CBD combining retail, managed offices and serviced residences.",
@@ -288,7 +307,7 @@ const seeds: Seed[] = [
     developer: "DLF Limited",
     status: "Grade A+",
     reraId: "RERA-GGM-C-0301-2022",
-    featured: true,
+    featured: false,
     order: 4,
     description:
       "A 27-acre integrated office campus near Cyber Hub with metro connectivity, large column-free floor plates and a retail boulevard.",
@@ -308,11 +327,52 @@ const seeds: Seed[] = [
     developer: "Whiteland Corporation",
     status: "Smart building",
     reraId: "RERA-GGM-C-0455-2024",
-    featured: true,
+    featured: false,
     order: 5,
     description:
       "An IoT-enabled retail-and-office block adjacent to DLF Downtown with app-based access, smart parking and a curated F&B plaza.",
     location: { lat: 28.4931, lng: 77.0902 },
+    brochureUrl: "#",
+  },
+
+  {
+    id: "p-signature-global-city-84",
+    slug: "signature-global-city-84",
+    title: "Signature Global City 84",
+    segment: "plots",
+    badge: "New Launch",
+    locality: "Sector 84",
+    city: "Gurugram",
+    priceLabel: "₹ 1.8 Cr* Onwards",
+    tags: ["150 – 300 Sq. Yd. Plots", "Gated Community"],
+    developer: "Signature Global",
+    status: "New Launch",
+    reraId: "RERA-GGM-P-0512-2024",
+    featured: false,
+    order: 1,
+    description:
+      "A licensed, gated plotted development on Dwarka Expressway with wide internal roads and a central landscaped park.",
+    location: { lat: 28.3654, lng: 76.9587 },
+    brochureUrl: "#",
+  },
+  {
+    id: "p-whiteland-la-verdi",
+    slug: "whiteland-la-verdi",
+    title: "Whiteland La Verdi",
+    segment: "plots",
+    badge: "Exclusive",
+    locality: "Sector 76",
+    city: "Gurugram",
+    priceLabel: "₹ 2.4 Cr* Onwards",
+    tags: ["200 – 400 Sq. Yd. Plots", "Corner Plots Available"],
+    developer: "Whiteland Corporation",
+    status: "Registration-ready",
+    reraId: "RERA-GGM-P-0587-2024",
+    featured: false,
+    order: 2,
+    description:
+      "Freehold, RERA-registered plots in New Gurugram's fastest-growing corridor, ready for immediate construction.",
+    location: { lat: 28.3877, lng: 76.9722 },
     brochureUrl: "#",
   },
 ];

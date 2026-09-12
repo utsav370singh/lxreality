@@ -6,7 +6,11 @@ import { cn } from "@/lib/utils";
 
 /**
  * Scroll-snap carousel with prev/next controls. Children are the slides;
- * width per slide is set by the caller via `slideClassName`.
+ * width per slide is set by the caller via `slideClassName`. When `autoPlay`
+ * is set, it advances by itself on that interval, loops back to the start,
+ * and pauses while the pointer is over it or it holds focus — a manual click
+ * on prev/next resets the timer instead of fighting it. Disabled automatically
+ * for prefers-reduced-motion (the manual controls still work).
  */
 export function Carousel({
   children,
@@ -14,16 +18,20 @@ export function Carousel({
   className,
   controlsTone = "dark",
   ariaLabel = "Carousel",
+  autoPlay,
 }: {
   children: React.ReactNode[];
   slideClassName?: string;
   className?: string;
   controlsTone?: "dark" | "light";
   ariaLabel?: string;
+  /** Auto-advance interval in ms, e.g. 5000. Omit to leave it manual-only. */
+  autoPlay?: number;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   const update = useCallback(() => {
     const el = trackRef.current;
@@ -51,6 +59,24 @@ export function Carousel({
     el.scrollBy({ left: dir * amount, behavior: "smooth" });
   };
 
+  useEffect(() => {
+    if (!autoPlay || paused) return;
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const id = window.setInterval(() => {
+      const el = trackRef.current;
+      if (!el) return;
+      const atLastSlide = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+      if (atLastSlide) {
+        el.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: Math.max(el.clientWidth * 0.8, 280), behavior: "smooth" });
+      }
+    }, autoPlay);
+
+    return () => window.clearInterval(id);
+  }, [autoPlay, paused]);
+
   const btn = cn(
     "flex size-10 items-center justify-center rounded-full border transition-colors disabled:opacity-30 disabled:cursor-not-allowed",
     controlsTone === "dark"
@@ -64,6 +90,10 @@ export function Carousel({
       role="region"
       aria-roledescription="carousel"
       aria-label={ariaLabel}
+      onMouseEnter={autoPlay ? () => setPaused(true) : undefined}
+      onMouseLeave={autoPlay ? () => setPaused(false) : undefined}
+      onFocus={autoPlay ? () => setPaused(true) : undefined}
+      onBlur={autoPlay ? () => setPaused(false) : undefined}
     >
       <div
         ref={trackRef}

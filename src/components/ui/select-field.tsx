@@ -19,16 +19,25 @@ export function SelectField({
   placeholder,
   options,
   defaultValue = "",
+  onChange,
 }: {
   name: string;
   label: string;
   placeholder: string;
   options: { value: string; label: string }[];
   defaultValue?: string;
+  /** Notified whenever the selection changes — for callers that need to react (e.g. routing). */
+  onChange?: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(defaultValue);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const select = (next: string) => {
+    setValue(next);
+    setOpen(false);
+    onChange?.(next);
+  };
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -73,10 +82,7 @@ export function SelectField({
           <li role="option" aria-selected={value === ""}>
             <button
               type="button"
-              onClick={() => {
-                setValue("");
-                setOpen(false);
-              }}
+              onClick={() => select("")}
               className={cn(
                 "block w-full rounded-lg px-3 py-2 text-left text-sm text-mist-400 hover:bg-gold-500/10",
                 value === "" && "bg-gold-500/10 text-gold-300",
@@ -89,10 +95,7 @@ export function SelectField({
             <li key={o.value} role="option" aria-selected={value === o.value}>
               <button
                 type="button"
-                onClick={() => {
-                  setValue(o.value);
-                  setOpen(false);
-                }}
+                onClick={() => select(o.value)}
                 className={cn(
                   "block w-full rounded-lg px-3 py-2 text-left text-sm text-white hover:bg-gold-500/10",
                   value === o.value && "bg-gold-500/15 text-gold-300",

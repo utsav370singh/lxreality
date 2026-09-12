@@ -145,6 +145,14 @@ export const whyInvestCommercial: Feature[] = [
   { icon: "Headset", title: "End-to-End Support", description: "From site visits to possession and beyond, we're with you" },
 ];
 
+export const whyInvestPlots: Feature[] = [
+  { icon: "FileCheck2", title: "Clear Titles", description: "RERA-registered plots with verified titles and documentation" },
+  { icon: "TrendingUp", title: "High Appreciation", description: "Land in high-growth corridors ahead of infrastructure build-out" },
+  { icon: "ShieldCheck", title: "Transparent Process", description: "End-to-end transparency in every transaction" },
+  { icon: "Landmark", title: "Build on Your Terms", description: "Freedom to design and construct at your own pace" },
+  { icon: "UserCheck", title: "Personalized Guidance", description: "Tailored solutions aligned with your goals" },
+];
+
 /* ---- Careers ---- */
 export const careersWhy: Feature[] = [
   { icon: "Target", title: "Purpose Driven", description: "Work on impactful projects that shape communities and create value." },

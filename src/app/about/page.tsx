@@ -107,6 +107,7 @@ export default async function AboutPage() {
             slideClassName="w-[300px] sm:w-[360px]"
             controlsTone="light"
             ariaLabel="Client testimonials"
+            autoPlay={5000}
           >
             {testimonials.map((t) => (
               <TestimonialCard key={t.id} testimonial={t} tone="light" className="h-full" />

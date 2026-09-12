@@ -8,6 +8,7 @@ import { Section, Container, SectionHeading } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { PropertyCard } from "@/components/cards/property-card";
 import { Carousel } from "@/components/ui/carousel";
+import { SEGMENT_LABELS } from "@/lib/property-filters";
 
 export const revalidate = 300;
 
@@ -44,7 +45,7 @@ export default async function PropertyDetailPage({
     .filter((p) => p.slug !== property.slug)
     .slice(0, 4);
 
-  const segmentLabel = property.segment === "commercial" ? "Commercial" : "Residential";
+  const segmentLabel = SEGMENT_LABELS[property.segment];
 
   return (
     <>
@@ -60,7 +61,7 @@ export default async function PropertyDetailPage({
               <span key={c} className="flex items-center gap-1.5">
                 {i > 0 && <ChevronRight className="size-3 text-gold-500/60" aria-hidden />}
                 <Link
-                  href={i === 0 ? "/" : i === 1 ? "/projects/residential" : `/projects/${property.segment}`}
+                  href={i === 0 ? "/" : `/projects/${property.segment}`}
                   className="hover:text-gold-300"
                 >
                   {c}

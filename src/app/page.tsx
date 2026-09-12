@@ -14,7 +14,7 @@ import { Section, Container, SectionHeadingFrom } from "@/components/ui/section"
 import { Carousel } from "@/components/ui/carousel";
 import { PropertyCard } from "@/components/cards/property-card";
 import { InsightCard } from "@/components/cards/insight-card";
-import { TestimonialCard } from "@/components/cards/testimonial-card";
+import { AutoTestimonial } from "@/components/cards/auto-testimonial";
 import { PartnerMarquee } from "@/components/sections/partner-marquee";
 import { CtaBand } from "@/components/sections/cta-band";
 import { ArrowLink } from "@/components/ui/arrow-link";
@@ -31,7 +31,7 @@ export default async function HomePage() {
       getProperties(),
       getServices(),
       getInsights({ kind: "article", limit: 4 }),
-      getTestimonials("home"),
+      getTestimonials(),
       getPartners("developer"),
       getAwards(),
     ]);
@@ -113,7 +113,7 @@ export default async function HomePage() {
             </div>
             <div className="lg:sticky lg:top-28 lg:self-start">
               <p className="eyebrow mb-4">{page.sections.testimonials?.eyebrow}</p>
-              {testimonials[0] && <TestimonialCard testimonial={testimonials[0]} tone="light" />}
+              <AutoTestimonial testimonials={testimonials} tone="light" />
             </div>
           </div>
         </Container>

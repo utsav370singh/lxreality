@@ -219,6 +219,58 @@ function lxr_seed_pdf( string $seed_key, string $title, array $meta_lines, strin
 	return wp_get_attachment_url( $id );
 }
 
+/**
+ * Upload a real logo file that ships with this plugin (wordpress/lx-realty-cms/
+ * seed-assets/partners/*) into the Media Library — unlike the picsum/pravatar
+ * placeholders used elsewhere, partner logos are real brand assets, so they're
+ * bundled with the plugin instead of fetched from a placeholder service.
+ * Cached by filename, like lxr_seed_image(); an admin can still replace the
+ * attachment in Media Library at any time.
+ */
+function lxr_seed_partner_logo( string $filename, string $desc = '' ): int {
+	$cache_key = 'lxr_seed_partner_logo_' . md5( $filename );
+	$existing  = get_option( $cache_key );
+	if ( $existing && get_post( $existing ) ) {
+		return (int) $existing;
+	}
+
+	$path = LXR_CMS_DIR . 'seed-assets/partners/' . $filename;
+	if ( ! file_exists( $path ) ) {
+		WP_CLI::warning( "Partner logo asset not found: {$filename}" );
+		return 0;
+	}
+
+	$contents = file_get_contents( $path );
+	$upload   = wp_upload_bits( $filename, null, $contents );
+	if ( ! empty( $upload['error'] ) ) {
+		WP_CLI::warning( "Could not write partner logo {$filename}: {$upload['error']}" );
+		return 0;
+	}
+
+	$filetype = wp_check_filetype( $filename );
+	$id       = wp_insert_attachment( array(
+		'post_mime_type' => $filetype['type'] ?: 'image/png',
+		'post_title'     => $desc ?: $filename,
+		'post_status'    => 'inherit',
+	), $upload['file'] );
+
+	if ( is_wp_error( $id ) ) {
+		WP_CLI::warning( "Could not attach partner logo {$filename}: " . $id->get_error_message() );
+		return 0;
+	}
+
+	if ( function_exists( 'wp_generate_attachment_metadata' ) && ! str_ends_with( strtolower( $filename ), '.svg' ) ) {
+		$metadata = wp_generate_attachment_metadata( $id, $upload['file'] );
+		wp_update_attachment_metadata( $id, $metadata );
+	}
+
+	if ( $desc ) {
+		update_post_meta( $id, '_wp_attachment_image_alt', $desc );
+	}
+	update_option( $cache_key, $id );
+	return (int) $id;
+}
+
 function lxr_picsum( string $seed, int $w = 1200, int $h = 900 ): string {
 	return "https://picsum.photos/seed/" . rawurlencode( $seed ) . "/{$w}/{$h}";
 }
@@ -333,11 +385,11 @@ class LXR_Seed_Command {
 
 		$logo = lxr_seed_image( lxr_picsum( 'lx-logo', 400, 160 ), 'LX Realty' );
 		$stats = implode( "\n", array(
-			'Award | 10+ | Years of Excellence',
-			'Users | 5000+ | Happy Clients',
+			'Award | 8+ | Years of Excellence',
+			'Users | 2000+ | Happy Clients',
 			'Building2 | 25+ | Cities Pan India',
-			'Handshake | 15Mn+ | Sq. Ft. Advisory',
-			'BarChart3 | ₹ 2000Cr+ | Sales Facilitated',
+			'Handshake | 3.08 Mn+ | Sq. Ft. Advisory',
+			'BarChart3 | ₹ 4500Cr+ | Sales Facilitated',
 		) );
 
 		lxr_set_fields( $id, array(
@@ -363,9 +415,9 @@ class LXR_Seed_Command {
 	private function leaders(): array {
 		$data = array(
 			array( 'aakash', 'Aakash Sharma', 'Founder & CEO', "Aakash founded LX Realty with a conviction that real estate advice should be data-led, transparent and genuinely client-first." ),
-			array( 'abhishek', 'Abhishek Sharma', 'Director – Sales', "Abhishek leads LX Realty's sales organisation across 25+ cities." ),
-			array( 'anirudh', 'Anirudh Choukar', 'Director – Strategy', 'Anirudh heads research, valuation and strategy.' ),
-			array( 'faisal', 'Mohd. Faisal', 'Director – Partnerships', "Faisal manages LX Realty's developer and institutional partnerships." ),
+			array( 'abhishek', 'Abhishek Sharma', 'Co-Founder and Director', "Abhishek co-founded LX Realty and leads its sales organisation across 25+ cities." ),
+			array( 'shobha', 'Shobha Sharma', 'CFO and Director Legal & Compliances', "Shobha oversees LX Realty's finance function and all legal and regulatory compliance." ),
+			array( 'anirudh', 'Anirudh Chhoker', 'Business Head Sales', 'Anirudh heads the sales business, translating market data into decisions clients can act on with confidence.' ),
 		);
 		$ids = array();
 		foreach ( $data as $i => [ $seed, $name, $role, $bio ] ) {
@@ -461,20 +513,22 @@ class LXR_Seed_Command {
 
 	private function properties() {
 		$rows = array(
-			array( 'dlf-privana-west', 'DLF Privana West', 'residential', 'New Launch', 'Sector 76', 'Gurugram', '₹ 6.5 Cr* Onwards', array( '4 BHK', 'Luxury Living' ), '4 BHK + Utility', 'DLF Limited', 1 ),
-			array( 'm3m-crown', 'M3M Crown', 'residential', 'Premium', 'Sector 111', 'Gurugram', '₹ 4.2 Cr* Onwards', array( '3 & 4 BHK', 'World-Class Amenities' ), '3 & 4 BHK', 'M3M India', 2 ),
-			array( 'godrej-miraya', 'Godrej Miraya', 'residential', 'Luxury', 'Sector 43', 'Gurugram', '₹ 3.8 Cr* Onwards', array( '3 & 4 BHK', 'Green Living' ), '3 & 4 BHK', 'Godrej Properties', 3 ),
-			array( 'signature-global-daxin-vistas', 'Signature Global Daxin Vistas', 'residential', 'Iconic', 'Sohna Expressway', 'Gurugram', '₹ 2.6 Cr* Onwards', array( '2, 3 & 4 BHK', 'Smart Homes' ), '2, 3 & 4 BHK', 'Signature Global', 4 ),
-			array( 'whiteland-blissville', 'Whiteland Blissville', 'residential', 'Exclusive', 'Sector 76', 'Gurugram', '₹ 2.3 Cr* Onwards', array( '2 & 3 BHK', 'Modern Lifestyle' ), '2 & 3 BHK', 'Whiteland Corporation', 5 ),
-			array( 'birla-arika', 'Birla Arika', 'residential', 'Hot Deal', 'Sector 31', 'Gurugram', '₹ 5.1 Cr* Onwards', array( '3 & 4 BHK', 'Ultra Luxury' ), '3 & 4 BHK', 'Birla Estates', 6 ),
-			array( 'signature-global-business-hub', 'Signature Global Business Hub', 'commercial', 'Premium', 'Sector 81', 'Gurugram', '₹ 2.8 Cr* Onwards', array( 'Retail & Office', 'Grade A' ), '', 'Signature Global', 1 ),
-			array( 'm3m-urbana-business-park', 'M3M Urbana Business Park', 'commercial', 'Iconic', 'Sector 67', 'Gurugram', '₹ 1.9 Cr* Onwards', array( 'Office Spaces', 'LEED Gold' ), '', 'M3M India', 2 ),
-			array( 'godrej-riverine', 'Godrej Riverine', 'commercial', 'Pre-Launch', 'Sector 44', 'Noida', '₹ 2.5 Cr* Onwards', array( 'Mixed Use', 'IGBC Certified' ), '', 'Godrej Properties', 3 ),
-			array( 'dlf-downtown', 'DLF Downtown', 'commercial', 'Luxury', 'Sector 25A', 'Gurugram', '₹ 3.6 Cr* Onwards', array( 'Premium Offices', 'Grade A+' ), '', 'DLF Limited', 4 ),
-			array( 'whiteland-the-aspen-hub', 'Whiteland The Aspen Hub', 'commercial', 'Exclusive', 'Sector 25A', 'Gurugram', '₹ 2.6 Cr* Onwards', array( 'Retail & Office', 'Smart Building' ), '', 'Whiteland Corporation', 5 ),
+			array( 'dlf-privana-west', 'DLF Privana West', 'residential', 'New Launch', 'Sector 76', 'Gurugram', '₹ 6.5 Cr* Onwards', array( '4 BHK', 'Luxury Living' ), '4 BHK + Utility', 'DLF Limited', 1, true ),
+			array( 'm3m-crown', 'M3M Crown', 'residential', 'Premium', 'Sector 111', 'Gurugram', '₹ 4.2 Cr* Onwards', array( '3 & 4 BHK', 'World-Class Amenities' ), '3 & 4 BHK', 'M3M India', 2, true ),
+			array( 'godrej-miraya', 'Godrej Miraya', 'residential', 'Luxury', 'Sector 43', 'Gurugram', '₹ 3.8 Cr* Onwards', array( '3 & 4 BHK', 'Green Living' ), '3 & 4 BHK', 'Godrej Properties', 3, true ),
+			array( 'signature-global-daxin-vistas', 'Signature Global Daxin Vistas', 'residential', 'Iconic', 'Sohna Expressway', 'Gurugram', '₹ 2.6 Cr* Onwards', array( '2, 3 & 4 BHK', 'Smart Homes' ), '2, 3 & 4 BHK', 'Signature Global', 4, true ),
+			array( 'whiteland-blissville', 'Whiteland Blissville', 'residential', 'Exclusive', 'Sector 76', 'Gurugram', '₹ 2.3 Cr* Onwards', array( '2 & 3 BHK', 'Modern Lifestyle' ), '2 & 3 BHK', 'Whiteland Corporation', 5, true ),
+			array( 'birla-arika', 'Birla Arika', 'residential', 'Hot Deal', 'Sector 31', 'Gurugram', '₹ 5.1 Cr* Onwards', array( '3 & 4 BHK', 'Ultra Luxury' ), '3 & 4 BHK', 'Birla Estates', 6, true ),
+			array( 'signature-global-business-hub', 'Signature Global Business Hub', 'commercial', 'Premium', 'Sector 81', 'Gurugram', '₹ 2.8 Cr* Onwards', array( 'Retail & Office', 'Grade A' ), '', 'Signature Global', 1, false ),
+			array( 'm3m-urbana-business-park', 'M3M Urbana Business Park', 'commercial', 'Iconic', 'Sector 67', 'Gurugram', '₹ 1.9 Cr* Onwards', array( 'Office Spaces', 'LEED Gold' ), '', 'M3M India', 2, false ),
+			array( 'godrej-riverine', 'Godrej Riverine', 'commercial', 'Pre-Launch', 'Sector 44', 'Noida', '₹ 2.5 Cr* Onwards', array( 'Mixed Use', 'IGBC Certified' ), '', 'Godrej Properties', 3, false ),
+			array( 'dlf-downtown', 'DLF Downtown', 'commercial', 'Luxury', 'Sector 25A', 'Gurugram', '₹ 3.6 Cr* Onwards', array( 'Premium Offices', 'Grade A+' ), '', 'DLF Limited', 4, false ),
+			array( 'whiteland-the-aspen-hub', 'Whiteland The Aspen Hub', 'commercial', 'Exclusive', 'Sector 25A', 'Gurugram', '₹ 2.6 Cr* Onwards', array( 'Retail & Office', 'Smart Building' ), '', 'Whiteland Corporation', 5, false ),
+			array( 'signature-global-city-84', 'Signature Global City 84', 'plots', 'New Launch', 'Sector 84', 'Gurugram', '₹ 1.8 Cr* Onwards', array( '150 – 300 Sq. Yd. Plots', 'Gated Community' ), '', 'Signature Global', 1, false ),
+			array( 'whiteland-la-verdi', 'Whiteland La Verdi', 'plots', 'Exclusive', 'Sector 76', 'Gurugram', '₹ 2.4 Cr* Onwards', array( '200 – 400 Sq. Yd. Plots', 'Corner Plots Available' ), '', 'Whiteland Corporation', 2, false ),
 		);
 
-		foreach ( $rows as [ $slug, $title, $segment, $badge, $locality, $city, $price, $tags, $config, $developer, $order ] ) {
+		foreach ( $rows as [ $slug, $title, $segment, $badge, $locality, $city, $price, $tags, $config, $developer, $order, $featured ] ) {
 			$id = lxr_upsert( 'lxr_property', "property-{$slug}", array( 'post_title' => $title, 'post_name' => $slug ) );
 			$image = lxr_seed_image( lxr_picsum( "prop-{$slug}", 1200, 900 ), $title );
 			$gallery = array();
@@ -483,10 +537,13 @@ class LXR_Seed_Command {
 			}
 			set_post_thumbnail( $id, $image );
 
-			$is_res = 'residential' === $segment;
-			$amenities = $is_res
-				? array( 'Grand double-height lobby', 'Infinity-edge swimming pool', 'Fully-equipped fitness studio', 'Landscaped central greens', "Kids' play zone & crèche", '24×7 security with CCTV' )
-				: array( 'Triple-height entrance lobby', 'High-speed elevators', '100% power back-up', 'Multi-level basement parking', 'EV charging infrastructure', '24×7 manned security' );
+			if ( 'residential' === $segment ) {
+				$amenities = array( 'Grand double-height lobby', 'Infinity-edge swimming pool', 'Fully-equipped fitness studio', 'Landscaped central greens', "Kids' play zone & crèche", '24×7 security with CCTV' );
+			} elseif ( 'plots' === $segment ) {
+				$amenities = array( 'Gated entry with boundary wall', 'Tree-lined internal roads', 'Underground electrical & water lines', 'Rainwater harvesting pits', 'Landscaped central park', '24×7 security with CCTV' );
+			} else {
+				$amenities = array( 'Triple-height entrance lobby', 'High-speed elevators', '100% power back-up', 'Multi-level basement parking', 'EV charging infrastructure', '24×7 manned security' );
+			}
 			$specifications = array(
 				'Configuration: ' . ( $config ?: implode( ' · ', $tags ) ),
 				'Possession: Q4 2028',
@@ -507,7 +564,7 @@ class LXR_Seed_Command {
 				'field_lxr_property_developer'      => $developer,
 				'field_lxr_property_status'         => $badge,
 				'field_lxr_property_reraId'         => 'RERA-GGM-' . wp_rand( 1000, 9999 ) . '-2024',
-				'field_lxr_property_featured'       => true,
+				'field_lxr_property_featured'       => $featured,
 				'field_lxr_property_displayOrder'   => $order,
 				'field_lxr_property_description'    => "{$title} at {$locality}, {$city} — a landmark {$segment} address by {$developer}.",
 				'field_lxr_property_overview'       => "<p>{$title} at {$locality}, {$city} is developed by {$developer}, curated to protect and grow long-term value for owners and investors.</p>",
@@ -575,6 +632,7 @@ class LXR_Seed_Command {
 			array( 'careers-anjali', 'careers', "I love the trust and flexibility that LX Realty offers.", 'Anjali Verma', 'Marketing Specialist' ),
 			array( 'residential-neha', 'residential', 'LX Realty helped us find our dream home in the perfect location.', 'Neha Arora', 'Homebuyer, Noida' ),
 			array( 'commercial-rahul', 'commercial', "LX Realty's market knowledge helped us find the perfect commercial space for our business.", 'Rahul Mehta', 'Business Owner, Gurugram' ),
+			array( 'plots-karan', 'plots', 'The team helped us pick a plot with clear titles and genuine appreciation potential. Every document was verified before we signed anything.', 'Karan Malhotra', 'Investor, Gurugram' ),
 		);
 		foreach ( $rows as $i => [ $slug, $group, $quote, $name, $role ] ) {
 			$id = lxr_upsert( 'lxr_testimonial', "testimonial-{$slug}", array( 'post_title' => $name, 'menu_order' => $i ) );
@@ -624,8 +682,8 @@ class LXR_Seed_Command {
 
 		$perspectives = array(
 			array( 'perspective-aakash-sharma', 'aakash', 'Real estate is about long-term value, not just space', "Real estate in India is not just about spaces, it's about creating long-term value for communities and investors alike.", '2024-05-18' ),
-			array( 'perspective-anirudh-choukar', 'anirudh', 'Data and research are the core of every real estate decision', "Data and research are at the core of every successful real estate decision.", '2024-05-11' ),
-			array( 'perspective-mohd-faisal', 'faisal', 'Transparency, trust and technology will define the next era', 'Transparency, trust, and technology will define the next era of real estate in India.', '2024-05-04' ),
+			array( 'perspective-anirudh-chhoker', 'anirudh', 'Data and research are the core of every real estate decision', "Data and research are at the core of every successful real estate decision.", '2024-05-11' ),
+			array( 'perspective-shobha-sharma', 'shobha', 'Transparency and compliance will define the next era', 'Transparency, trust, and rigorous compliance will define the next era of real estate in India.', '2024-05-04' ),
 		);
 		foreach ( $perspectives as [ $slug, $leaderSeed, $title, $excerpt, $date ] ) {
 			$id = lxr_upsert( 'lxr_insight', "insight-{$slug}", array(
@@ -724,10 +782,39 @@ class LXR_Seed_Command {
 			// Shown as "Our Esteemed Clients" on /projects/commercial.
 			'client'    => array( 'DLF', 'M3M', 'Godrej Properties', 'Signature Global', 'Whiteland', 'Smartworld', 'Bhutani Infra', 'Elan Group' ),
 		);
+
+		// Real brand logos bundled at seed-assets/partners/ (see lxr_seed_partner_logo()).
+		$logo_files = array(
+			'DLF'                   => 'dev-dlf.svg',
+			'M3M'                   => 'dev-m3m.png',
+			'Godrej Properties'     => 'dev-godrej-properties.jpg',
+			'Signature Global'      => 'dev-signature-global.svg',
+			'Whiteland'             => 'dev-whiteland.svg',
+			'Smartworld'            => 'dev-smartworld.webp',
+			'Bhutani Infra'         => 'dev-bhutani-infra.png',
+			'Elan Group'            => 'dev-elan-group.png',
+			'Birla Estates'         => 'dev-birla-estates.svg',
+			'HDFC Bank'             => 'bank-hdfc.svg',
+			'ICICI Bank'            => 'bank-icici.svg',
+			'SBI'                   => 'bank-sbi.svg',
+			'Axis Bank'             => 'bank-axis.svg',
+			'Kotak Mahindra Bank'   => 'bank-kotak.svg',
+			'IDFC First Bank'       => 'bank-idfc-first.svg',
+			'Bajaj Housing Finance' => 'bank-bajaj-housing.png',
+			'PNB Housing'           => 'bank-pnb-housing.png',
+			'Godrej Interio'        => 'interior-godrej-interio.png',
+			'Livspace'              => 'interior-livspace.svg',
+			'HomeLane'              => 'interior-homelane.svg',
+			'Asian Paints'          => 'interior-asian-paints.svg',
+		);
+
 		foreach ( $groups as $group => $names ) {
 			foreach ( $names as $i => $name ) {
 				$id = lxr_upsert( 'lxr_partner', "partner-{$group}-" . sanitize_title( $name ), array( 'post_title' => $name, 'menu_order' => $i ) );
-				$logo = lxr_seed_image( lxr_picsum( "logo-{$group}-{$name}", 240, 96 ), "{$name} logo" );
+				$logo_file = $logo_files[ $name ] ?? '';
+				$logo = $logo_file
+					? lxr_seed_partner_logo( $logo_file, "{$name} logo" )
+					: lxr_seed_image( lxr_picsum( "logo-{$group}-{$name}", 240, 96 ), "{$name} logo" );
 				lxr_set_fields( $id, array(
 					'field_lxr_partner_group'        => $group,
 					'field_lxr_partner_displayOrder' => $i,
@@ -776,6 +863,7 @@ class LXR_Seed_Command {
 			'advisory-post-handover'  => array( 'Post-Handover Services', 'post-handover-interior' ),
 			'projects-residential'    => array( 'Residential Projects', 'residential-hero' ),
 			'projects-commercial'     => array( 'Commercial Projects', 'commercial-hero' ),
+			'projects-plots'          => array( 'Plots & Land', 'plots-hero' ),
 			'insights'                => array( 'Insights', 'insights-hero' ),
 			'careers'                 => array( 'Careers', 'careers-hero' ),
 			'contact'                 => array( 'Contact', 'contact-hero' ),

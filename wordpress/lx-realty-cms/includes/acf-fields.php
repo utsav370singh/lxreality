@@ -109,7 +109,7 @@ add_action( 'acf/init', function () {
 
 	/* ---------------- Property ---------------- */
 	lxr_group( 'property', 'Project Details', 'lxr_property', 'propertyFields', array(
-		lxr_select( 'property', 'segment', 'Segment', array( 'residential' => 'Residential', 'commercial' => 'Commercial' ), 'residential' ),
+		lxr_select( 'property', 'segment', 'Segment', array( 'residential' => 'Residential', 'commercial' => 'Commercial', 'plots' => 'Plots/Land' ), 'residential' ),
 		lxr_text( 'property', 'badge', 'Badge (e.g. New Launch, Premium)' ),
 		lxr_text( 'property', 'locality', 'Locality / Sector' ),
 		lxr_text( 'property', 'city', 'City' ),
@@ -280,7 +280,7 @@ add_action( 'acf/init', function () {
 		lxr_url( 'settings', 'youtube', 'YouTube URL' ),
 		lxr_f( 'settings', 'stats', 'Global stat bar', 'textarea', array(
 			'rows'         => 6,
-			'instructions' => "One \"Icon | Value | Label\" stat per line — icon is an optional lucide.dev icon name. Example:\nAward | 10+ | Years of Excellence\nUsers | 5000+ | Happy Clients",
+			'instructions' => "One \"Icon | Value | Label\" stat per line — icon is an optional lucide.dev icon name. Example:\nAward | 8+ | Years of Excellence\nUsers | 2000+ | Happy Clients",
 		) ),
 	) );
 

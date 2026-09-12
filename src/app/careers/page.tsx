@@ -75,7 +75,7 @@ export default async function CareersPage() {
       <Section tone="navy">
         <Container>
           <SectionHeadingFrom intro={page.sections.voices} />
-          <Carousel className="mt-10" slideClassName="w-[300px] sm:w-[360px]" ariaLabel="What our people say">
+          <Carousel className="mt-10" slideClassName="w-[300px] sm:w-[360px]" ariaLabel="What our people say" autoPlay={5000}>
             {voices.map((t) => (
               <TestimonialCard key={t.id} testimonial={t} className="h-full" />
             ))}
